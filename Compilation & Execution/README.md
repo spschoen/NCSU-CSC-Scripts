@@ -5,10 +5,11 @@ Index:
 * CompileAndExecuteScript.sh
   * Written by Samuel Schoeneberger (spschoen@ncsu.edu)
   * Bash / Shell
-  * Compiles/Executes
+  * Compiles/Executes, Runs style checker (assumes presence of style checker in ~/cs/)
   * (Optional) Uses input files given by user.
   * (Optional) Compares program output to expected output.
-  * Runs style checker.
-  * Greater documentation provided inside file.
   * REQUIREMENTS:
     * RenameScript.java, created by Dr. Jessica Schmidt and Zach Butler
+  * Execution of script:
+    * sh CompileAndExecuteScript [Java File] [Folder of student submission folders/Assignments to be renamed] [y/n whether or not to run RenameScript.java]
+    * sh CompileAndExecuteScript [Java File] [Folder of student submission folders/Assignments to be renamed] [y/n whether or not to run RenameScript.java] [expected output file] [user input file]
