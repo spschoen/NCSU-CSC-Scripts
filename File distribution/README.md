@@ -8,3 +8,4 @@ Index:
   * Reminder of code; non-functional.
   * Will take file (DrawingPanel.java) and transfer it to subdirectories for later use.
   * Very specific use, basically a single line of shell scripting.
+  * Execution: N/A Not fully funcational.
