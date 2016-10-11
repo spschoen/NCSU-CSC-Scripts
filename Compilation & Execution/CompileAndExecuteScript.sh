@@ -206,7 +206,7 @@ compileAndExecuteAndStyle() {
     echo "NOTE: Automated Style Checker executing."
     echo "NOTE: This program assumes your style checker exists in ~/cs/."
 
-    #It sure as shit assumes it because I need to figure out how to check if a file exists
+    #It sure as tarnation assumes it because I need to figure out how to check if a file exists
     #But not extension.  I think the problem might be that it's looking for the 
     #checkstyle directory in the cs directory, not the checkstyle file.
 
