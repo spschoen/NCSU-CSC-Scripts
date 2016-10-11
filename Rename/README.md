@@ -7,7 +7,11 @@ Index:
   * Python
   * Creates a folder for each student's submission, and names it their UnityID.
   * Dr. King, please fill this out greater if you feel the need.
+  * Execution:
+    * python Rename.py
 * RenameScript.java
   * Written by Dr. Jessica Schmidt (jessica_schmidt@ncsu.edu)
   * Java
   * Creates directory for each student submission, and moves files inside. Folder names are LastName_FirstName.
+  * Execution:
+    * java RenameScript [Folder of submissions from Moodle to be renamed]
