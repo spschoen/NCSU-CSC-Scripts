@@ -5,6 +5,7 @@ Index:
 * GenerateReports.java
   * Written by Samuel Schoeneberger (spschoen@ncsu.edu)
   * Java
-  * NON-FUNCTIONAL
+  * NOT FUNCTIONAL
   * Planned: Reads files from CompileAndExecuteScript.sh and creates user readable files.
+  * Execution: N/A Not functional.
 
