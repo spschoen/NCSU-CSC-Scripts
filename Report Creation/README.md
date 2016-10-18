@@ -5,7 +5,7 @@ Index:
 * GenerateReports.java
   * Written by Samuel Schoeneberger (spschoen@ncsu.edu)
   * Java
-  * NOT FUNCTIONAL
+  * Semi functional - reads output_style.txt and creates a human-readable version.
   * Planned: Reads files from CompileAndExecuteScript.sh and creates user readable files.
-  * Execution: N/A Not functional.
+  * Execution: java GenerateReports.java [Folder of Folders of Java File]
 
