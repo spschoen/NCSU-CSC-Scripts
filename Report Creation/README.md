@@ -22,4 +22,5 @@ Index:
     * XML_CSS.xsl (same directory)
     * wkhtmltopdf (http://wkhtmltopdf.org/) (in home directory)
   * Assuming you lack wkhtmltopdf, the HTML might still be created.  I haven't tested.
-* 
+* XML_CSS
+  * Not a script, just a required file for checkstyletohtmlpdf to work.
