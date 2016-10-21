@@ -7,5 +7,11 @@ Index:
   * Java
   * Semi functional - reads output_style.txt and creates a human-readable version.
   * Planned: Reads files from CompileAndExecuteScript.sh and creates user readable files.
+    * Sort of.
   * Execution: java GenerateReports.java [Folder of Folders of Java File]
+* GenerateReport.java
+  * Written by Samuel Schoeneberger (spschoen@ncsu.edu)
+  * Java
+  * Creates a human readable version of output files from CompileAndExecute.sh, Report.txt
+  * Execution: java GenerateReports.java [Student Submission folder containing output_*.txt files]
 
