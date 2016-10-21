@@ -5,6 +5,8 @@
 # Moodle.  Generates 2 output files for each step - an              #
 # output_[step].txt file, and an output_[step]_error.txt file,      #
 # both from stdout and stderr.                                      #
+# Also generates a report based on output files.  Read that,        #
+# and ignore the rest.                                              #
 #                                                                   #
 # Arguments expected: .java file to compile                         #
 #                     directory of student programs.                #
@@ -35,8 +37,9 @@
 # 3. Save this archive as described in the directory structure      #
 #    diagram as detailed below, and extract it so your setup        #
 #    matches the expected.  Then, delete the archive file.          #
-# 4. Run the script.
-
+# 4. Run the script.                                                #
+#                                                                   #
+#####################################################################
 
 #####################################################################
 #                                                                   #
@@ -51,6 +54,7 @@
 # Directory                                                         #
 #  -- CompileAndExecuteScript.sh                                    #
 #  -- RenameScript.java                                             #
+#  -- GenerateReport.java                                           #
 #  -- Assignment Directory                                          #
 #      -- Student_Numbers_assignmsubmission_file_JavaProgram.java   #
 #      -- Student_Numbers_assignmsubmission_file_JavaProgram.java   #
@@ -64,6 +68,7 @@
 # Directory                                                         #
 #  -- CompileAndExecuteScript.sh                                    #
 #  -- RenameScript.java                                             #
+#  -- GenerateReport.java                                           #
 #  -- Assignment Directory                                          #
 #      -- Student 1 Directory                                       #
 #          -- JavaProgram.java                                      #
@@ -74,6 +79,7 @@
 #          -- output_execute_error.txt                              #
 #          -- output_style.txt                                      #
 #          -- output_style_error.txt                                #
+#          -- Report.txt                                            #
 #      -- Student 2 Directory                                       #
 #      -- ...                                                       #
 #                                                                   #
@@ -82,20 +88,21 @@
 #####################################################################
 #                                                                   #
 # Changelog                                                         #
-#   v0 - 16/09/12 - Initial version.                                #
+#   v0   - 16/09/12 - Initial version.                              #
 #   v0.1 - 16/09/29 - Updated documentation. SO MUCH DOCUMENTATION. #
 #              Started work on arguments.                           #
 #              Integrated RenameScript.java                         #
 #   v0.2 - 16/10/04 - Started adding optional expected files.       #
 #   v1.0 - 16/10/11 - Added optional expected files.                #
 #              Started work on adding optional input files.         #
+#   v1.1 - 16/10/21 - Integrated GenerateReport.java                #
+#              GenerateReport is currently required, will make      #
+#              optional once I get to a proper terminal.            #
+#              Fixed checking for Stylechecker                      #
 #                                                                   #
 #####################################################################
 
 #!/bin/bash/
-
-#read -t 1 -n 10000 discard 
-#saved for later: to ignore stdin
 
 compileAndExecuteAndStyle() {
 
@@ -206,15 +213,11 @@ compileAndExecuteAndStyle() {
     echo "NOTE: Automated Style Checker executing."
     echo "NOTE: This program assumes your style checker exists in ~/cs/."
 
-    #It sure as tarnation assumes it because I need to figure out how to check if a file exists
-    #But not extension.  I think the problem might be that it's looking for the 
-    #checkstyle directory in the cs directory, not the checkstyle file.
-
-    #if [ ! -a $CHECKSTYLE ]; then
-    #    echo "ERR: Could not find checkstyle in ~/cs/.  Please install Checkstyle to ~/cs/"
-    #    echo "Exiting program with status 5"
-    #    exit 5
-    #fi
+    if [ ! -d ~/cs/ ]; then
+        echo "ERR: Could not find checkstyle in ~/cs/.  Please install Checkstyle to ~/cs/"
+        echo "Exiting program with status 5"
+        exit 5
+    fi
 
     ~/cs/checkstyle $COMP_FILENAME > output_style.txt 2> output_style_error.txt
 
@@ -234,8 +237,7 @@ compileAndExecuteAndStyle() {
     else
         echo "NOTE: No style errors detected.  Great!"
     fi
-
-    sleep 1
+	
 }
 
 #####################################################################
@@ -351,12 +353,13 @@ for d in *; do
     if [ -d "${d}" ]; then
         cd "${d}"
         if [ -r $COMP_FILENAME ]; then
-            #echo "ERR: $COMP_FILENAME not found in folder ${d}."
-            #echo "Exiting program with status 1."
-            #exit 1
             clear
             echo "NOTE: Current working directory: ${d}"
             compileAndExecuteAndStyle "$COMP_FILENAME"
+			echo "--------------------------------------------------------"
+			echo "NOTE: Generating Report based on output files."
+			java -classpath $myDir GenerateReport $myDir/$2/"${d}"
+			sleep 1
         else
             echo "Err: File does not exist"
         fi
