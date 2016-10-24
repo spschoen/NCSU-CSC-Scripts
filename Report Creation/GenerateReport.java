@@ -157,6 +157,8 @@ public class GenerateReport {
         int numCstWrong = 0;
         int numMtdWrong = 0;
         int numPrmWrong = 0;
+        int numLongLine = 0;
+		int uknownError = 0;
         
         boolean hasAuthorTag = true;
         
@@ -197,38 +199,21 @@ public class GenerateReport {
             // Check if a tab character was detected.
             if (line.contains("tab")) {
                 numTabLines++;
-            }
-            
-            if ( line.contains("incorrect indentation") ) {
+            } else if ( line.contains("incorrect indentation") ) {
                 numIncInden++;
-            }
-            
-            if ( line.contains("@author") ) {
+            } else if ( line.contains("@author") ) {
                 hasAuthorTag = false;
-            }
-            
-            if ( line.contains("Missing a Javadoc") ) {
+            } else if ( line.contains("Missing a Javadoc") ) {
                 numJvdMisng++;
-            }
-            
-            if ( line.contains("WhitespaceAround:") ) {
+            } else if ( line.contains("WhitespaceAround:") ) {
                 numWtsMisng++;
-            }
-            
-            if ( line.contains("@return") ) {
+            } else if ( line.contains("@return") ) {
                 numRetMisng++;
-            }
-            
-            if ( line.contains("@param") ) {
+            } else if ( line.contains("@param") ) {
                 numParMisng++;
-            }
-            
-            // Magic, or more magic?
-            if ( line.contains("magic") ) {
+            } else if ( line.contains("magic") ) {
                 numMgcNumbr++;
-            }
-            
-            if ( line.contains("match pattern") ) {
+            } else if ( line.contains("match pattern") ) {
                 if ( line.contains("Type name") ) {
                     numTypWrong++;
                 }
@@ -242,7 +227,11 @@ public class GenerateReport {
                     numPrmWrong++;
                 }
                 
-            }
+            } else if ( line.contains("longer than") ) {
+				numLongLine++;
+			} else {
+				uknownError++;
+			}
             
         }
         
@@ -285,6 +274,10 @@ public class GenerateReport {
         outputLine += numMgcNumbr + "\n";
         writer.write(outputLine);
         
+        outputLine = "Number of lines longer than allowed: ";
+        outputLine += numLongLine + "\n";
+        writer.write(outputLine);
+        
         outputLine = "Number of types incorrectly named  : ";
         outputLine += numTypWrong + "\n";
         writer.write(outputLine);
@@ -299,6 +292,10 @@ public class GenerateReport {
         
         outputLine = "       parameters incorrectly named: ";
         outputLine += numPrmWrong + "\n";
+        writer.write(outputLine);
+        
+        outputLine = "Number of unknown errors detected  : ";
+        outputLine += uknownError + "\n";
         writer.write(outputLine);
         
         writer.flush();
