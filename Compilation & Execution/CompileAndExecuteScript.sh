@@ -24,6 +24,12 @@
 # Note: This program optionally expects an expected file AND        #
 #   an input file, or just an expected file.  It will not work      #
 #   with only an input file.                                        #
+#   same directory.                                                 #
+# Note: This script benefits greatly from GenerateReport.java       #
+#   (another of my scripts) by summarizing the six (!) output files #
+#   from compilation and whatnot.                                   #
+#                                                                   #
+# Planned Update: Name output files based on file being compiled.   #
 #                                                                   #
 #####################################################################
 
@@ -113,8 +119,6 @@ compileAndExecuteAndStyle() {
     if [ ! -r $COMP_FILENAME ]; then
         echo "ERR: $COMP_FILENAME not found or could not be read."
         echo ${PWD##*/}
-        #echo "Exiting program with status 1."
-        #exit 1
         return
     fi
 
@@ -125,32 +129,32 @@ compileAndExecuteAndStyle() {
     rm -f output_compile.txt output_compile_error.txt
     rm -f output_execute.txt output_execute_error.txt
     rm -f output_style.txt output_style_error.txt
-
+    
     echo "--------------------------------------------------------"
-
+    
     #Compile the given file notice.
     echo "NOTE: Attempting to compile $COMP_FILENAME"
     echo "NOTE: Output and errors will be printed to output_compile.txt and output_compile_error.txt"
-
+    
     #Compile the given file, output anything to these files.
     javac $COMP_FILENAME > output_compile.txt 2> output_compile_error.txt
-
+    
     COMP_OUTPUT="output_compile.txt"
     COMP_OUTPUT_ERROR="output_compile_error.txt"
-
+    
     #Make sure we compiled and were able to output to files.
     if [ ! -r $COMP_OUTPUT ]; then
         echo "ERR: Could not create output file for compilation."
         echo "Exiting program with status 2"
         exit 2
     fi
-
+    
     if [ ! -r $COMP_OUTPUT_ERROR ]; then
         echo "ERR: Could not create output file for compilation error."
         echo "Exiting program with status 2"
         exit 2
     fi
-
+    
     #Check if there were compilation errors.
     if [ $(stat -c%s output_compile_error.txt) -gt 0 ]; then
         echo "ERR: Compilation errors detected.  Would you like to continue? (y\n)"
@@ -164,7 +168,7 @@ compileAndExecuteAndStyle() {
     else
         echo "NOTE: No compilation errors detected."
     fi
-
+    
     echo "NOTE: Compilation complete."
     echo "--------------------------------------------------------"
 
@@ -200,38 +204,37 @@ compileAndExecuteAndStyle() {
         echo "Expected file                                 | User Output File"
         
         #Using -y because that makes two columns for viewing - easier to read.
-        diff -y --width=100 $EXPECTED_FILE output_execute.txt
+        diff $EXPECTED_FILE output_execute.txt
         
-        read -n 1 -r -s -p "NOTE: Press any key to continue
+        read -n 1 -r -s -p "
+NOTE: Press any key to continue
 "
         
         echo "--------------------------------------------------------"
     fi
     
-    
-
     echo "NOTE: Automated Style Checker executing."
     echo "NOTE: This program assumes your style checker exists in ~/cs/."
-
+    
     if [ ! -d ~/cs/ ]; then
         echo "ERR: Could not find checkstyle in ~/cs/.  Please install Checkstyle to ~/cs/"
         echo "Exiting program with status 5"
         exit 5
     fi
-
+    
     ~/cs/checkstyle $COMP_FILENAME > output_style.txt 2> output_style_error.txt
-
+    
     if [ $(stat -c%s output_style_error.txt) -gt 0 ]; then
         echo "ERR: Errors occured while checking style.  Details in output_style_error.txt"
     fi
-
+    
     #This is some funky math.
     #So, the amount of bytes written by checkstyle is 199 + name of file -.java
     #So we check for size of file > (199 + length of program name)
     #If greater, we have style errors.  If not, it's equal and we're good to go.
     STYLE_FILESIZE=$(stat -c%s output_style.txt)
     COMP_FILENAME_WITHOUT_JAVA=${COMP_FILENAME%.java}
-
+    
     if [ "$STYLE_FILESIZE" -gt $(( 199 + ${#COMP_FILENAME_WITHOUT_JAVA} )) ]; then
         echo "NOTE: Style errors detected.  ;-;"
     else
@@ -356,9 +359,18 @@ for d in *; do
             clear
             echo "NOTE: Current working directory: ${d}"
             compileAndExecuteAndStyle "$COMP_FILENAME"
-			echo "--------------------------------------------------------"
-			echo "NOTE: Generating Report based on output files."
-			java -classpath $myDir GenerateReport $myDir/$2/"${d}"
+            if [ -f $myDir/"GenerateReport.java" ]; then
+                echo "--------------------------------------------------------"
+                echo "NOTE: Generating Report based on output files."
+                java -classpath $myDir GenerateReport $myDir/$2/"${d}"  
+            fi
+            
+            #Does not function.
+            #if [ -f $myDir/"checkstyletohtmlpdf.sh" ]; then
+            #    echo "--------------------------------------------------------"
+            #    echo "NOTE: Generating Style Report based on output files."
+            #    sh $myDir/checkstyletohtmlpdf.sh $myDir/$2"${d}"/$COMP_FILENAME
+            #fi
 			sleep 1
         else
             echo "Err: File does not exist"

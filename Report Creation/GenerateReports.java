@@ -105,164 +105,161 @@ public class GenerateReports {
                 System.exit(1);
             }
             
-            String javaFileName = "";
-            int numTabLines = 0;
-            int numIncInden = 0;
-            int numJvdMisng = 0;
-            int numWtsMisng = 0;
-            int numRetMisng = 0;
-            int numParMisng = 0;
-            int numMgcNumbr = 0;
-            int numTypWrong = 0;
-            int numCstWrong = 0;
-            int numMtdWrong = 0;
-            int numPrmWrong = 0;
+			String javaFileName = "";
+			int numTabLines = 0;
+			int numIncInden = 0;
+			int numJvdMisng = 0;
+			int numWtsMisng = 0;
+			int numRetMisng = 0;
+			int numParMisng = 0;
+			int numMgcNumbr = 0;
+			int numTypWrong = 0;
+			int numCstWrong = 0;
+			int numMtdWrong = 0;
+			int numPrmWrong = 0;
+			int numLongLine = 0;
+			int uknownError = 0;
             
             boolean hasAuthorTag = true;
             
             while ( reader.hasNextLine() ) {
-                String line = reader.nextLine();
+				String line = reader.nextLine();
+				
+				// If the audit is complete.
+				if ( line.contains(AUDIT_COMPLETE) ) {
+					break;
+				}
+				
+				if (line.contains(INDENT_LEVEL) || 
+					line.contains(INDENT_LEVEL_TWO) || 
+					line.contains(DOING_STYLE) || 
+					line.contains(STARTING_AUDIT) ||
+					line.equals("")) {
+					
+					continue;
+					
+				}
+				
+				//Removing a few things:
+				
+				// /afs/unity.ncsu.edu/users/* /
+				line = line.substring(AFS_START_SUBSTRING_LENGTH);
+				
+				// unityid/folders/.../StudentLastName_
+				line = line.substring(line.indexOf("_") + 1);
+				
+				// StudentFirstName/
+				line = line.substring(line.indexOf("/") + 1);
+				//System.out.println(line);
+				
+				//Final output: Program.java:##: Style Error
+				
+				javaFileName = line.substring(0, line.indexOf("."));
+				
+				// Check if a tab character was detected.
+				if (line.contains("tab")) {
+					numTabLines++;
+				} else if ( line.contains("incorrect indentation") ) {
+					numIncInden++;
+				} else if ( line.contains("@author") ) {
+					hasAuthorTag = false;
+				} else if ( line.contains("Missing a Javadoc") ) {
+					numJvdMisng++;
+				} else if ( line.contains("WhitespaceAround:") ) {
+					numWtsMisng++;
+				} else if ( line.contains("@return") ) {
+					numRetMisng++;
+				} else if ( line.contains("@param") ) {
+					numParMisng++;
+				} else if ( line.contains("magic") ) {
+					numMgcNumbr++;
+				} else if ( line.contains("match pattern") ) {
+					if ( line.contains("Type name") ) {
+						numTypWrong++;
+					}
+					if ( line.contains("Constant name") ) {
+						numCstWrong++;
+					}
+					if ( line.contains("Method name") ) {
+						numMtdWrong++;
+					}
+					if ( line.contains("Parameter name") ) {
+						numPrmWrong++;
+					}
+					
+				} else if ( line.contains("longer than") ) {
+					numLongLine++;
+				} else {
+					uknownError++;
+				}
                 
-                // If the audit is complete.
-                if ( line.contains(AUDIT_COMPLETE) ) {
-                    break;
-                }
-                
-                if (line.contains(INDENT_LEVEL) || 
-                    line.contains(INDENT_LEVEL_TWO) || 
-                    line.contains(DOING_STYLE) || 
-                    line.contains(STARTING_AUDIT) ||
-                    line.equals("")) {
-                    
-                    continue;
-                    
-                }
-                
-                //Removing a few things:
-                
-                // /afs/unity.ncsu.edu/users/*/
-                line = line.substring(AFS_START_SUBSTRING_LENGTH);
-                
-                // unityid/folders/.../StudentLastName_
-                line = line.substring(line.indexOf("_") + 1);
-                
-                // StudentFirstName/
-                line = line.substring(line.indexOf("/") + 1);
-                //System.out.println(line);
-                
-                //Final output: Program.java:##: Style Error
-                
-                javaFileName = line.substring(0, line.indexOf("."));
-                
-                // Check if a tab character was detected.
-                if (line.contains("tab")) {
-                    numTabLines++;
-                }
-                
-                if ( line.contains("incorrect indentation") ) {
-                    numIncInden++;
-                }
-                
-                if ( line.contains("@author") ) {
-                    hasAuthorTag = false;
-                }
-                
-                if ( line.contains("Missing a Javadoc") ) {
-                    numJvdMisng++;
-                }
-                
-                if ( line.contains("WhitespaceAround:") ) {
-                    numWtsMisng++;
-                }
-                
-                if ( line.contains("@return") ) {
-                    numRetMisng++;
-                }
-                
-                if ( line.contains("@param") ) {
-                    numParMisng++;
-                }
-                
-                // Magic, or more magic?
-                if ( line.contains("magic") ) {
-                    numMgcNumbr++;
-                }
-                
-                if ( line.contains("match pattern") ) {
-                    if ( line.contains("Type name") ) {
-                        numTypWrong++;
-                    }
-                    if ( line.contains("Constant name") ) {
-                        numCstWrong++;
-                    }
-                    if ( line.contains("Method name") ) {
-                        numMtdWrong++;
-                    }
-                    if ( line.contains("Parameter name") ) {
-                        numPrmWrong++;
-                    }
-                    
-                }
-                
-            }
-            
-            String initOutput = "Generated Report for " + javaFileName;
-            writer.println(initOutput);
-            
-            if ( !hasAuthorTag ) {
-                writer.println("File lacks an @author Tag.");
-            }
-            
-            String outputLine = "Lines with tab characters detected : ";
-            outputLine += numTabLines;
-            writer.println(outputLine);
-            
-            outputLine = "Lines with incorrect indentation   : ";
-            outputLine += numIncInden;
-            writer.println(outputLine);
-            
-            if ( numTabLines != 0 && numIncInden != 0 ) {
-                writer.println("Warning: Incorrect indentation could be due to tab characters.");
-            }
-            
-            outputLine = "Lines with missing Javadoc Comments: ";
-            outputLine += numJvdMisng;
-            writer.println(outputLine);
-            
-            outputLine = "Whitespace errors (operators/loops): ";
-            outputLine += numWtsMisng;
-            writer.println(outputLine);
-            
-            outputLine = "Missing/Incorrect @return tags     : ";
-            outputLine += numRetMisng;
-            writer.println(outputLine);
-            
-            outputLine = "Missing/Incorrect @param tags      : ";
-            outputLine += numParMisng;
-            writer.println(outputLine);
-            
-            outputLine = "Detected magic numbers             : ";
-            outputLine += numMgcNumbr;
-            writer.println(outputLine);
-            
-            outputLine = "Number of types incorrectly named  : ";
-            outputLine += numTypWrong;
-            writer.println(outputLine);
-            
-            outputLine = "       constants incorrectly named : ";
-            outputLine += numCstWrong;
-            writer.println(outputLine);
-            
-            outputLine = "       methods incorrectly named   : ";
-            outputLine += numMtdWrong;
-            writer.println(outputLine);
-            
-            outputLine = "       parameters incorrectly named: ";
-            outputLine += numPrmWrong;
-            writer.println(outputLine);
-            
-            writer.println();
-            writer.flush();
+			}
+			
+			String initOutput = "Style Report for " + javaFileName + "\n";
+			writer.write(initOutput);
+			
+			if ( !hasAuthorTag ) {
+				writer.write("File lacks an @author Tag.\n");
+			}
+			
+			String outputLine = "Lines with tab characters detected : ";
+			outputLine += numTabLines + "\n";
+			writer.write(outputLine);
+			
+			outputLine = "Lines with incorrect indentation   : ";
+			outputLine += numIncInden + "\n";
+			writer.write(outputLine);
+			
+			if ( numTabLines != 0 && numIncInden != 0 ) {
+				writer.write("Warning: Incorrect indentation could be due to tab characters.\n");
+			}
+			
+			outputLine = "Lines with missing Javadoc Comments: ";
+			outputLine += numJvdMisng + "\n";
+			writer.write(outputLine);
+			
+			outputLine = "Whitespace errors (operators/loops): ";
+			outputLine += numWtsMisng + "\n";
+			writer.write(outputLine);
+			
+			outputLine = "Missing/Incorrect @return tags     : ";
+			outputLine += numRetMisng + "\n";
+			writer.write(outputLine);
+			
+			outputLine = "Missing/Incorrect @param tags      : ";
+			outputLine += numParMisng + "\n";
+			writer.write(outputLine);
+			
+			outputLine = "Detected magic numbers             : ";
+			outputLine += numMgcNumbr + "\n";
+			writer.write(outputLine);
+			
+			outputLine = "Number of lines longer than allowed: ";
+			outputLine += numLongLine + "\n";
+			writer.write(outputLine);
+			
+			outputLine = "Number of types incorrectly named  : ";
+			outputLine += numTypWrong + "\n";
+			writer.write(outputLine);
+			
+			outputLine = "       constants incorrectly named : ";
+			outputLine += numCstWrong + "\n";
+			writer.write(outputLine);
+			
+			outputLine = "       methods incorrectly named   : ";
+			outputLine += numMtdWrong + "\n";
+			writer.write(outputLine);
+			
+			outputLine = "       parameters incorrectly named: ";
+			outputLine += numPrmWrong + "\n";
+			writer.write(outputLine);
+			
+			outputLine = "Number of unknown errors detected  : ";
+			outputLine += uknownError + "\n";
+			writer.write(outputLine);
+			
+			writer.println();
+			writer.flush();
         
         }
     

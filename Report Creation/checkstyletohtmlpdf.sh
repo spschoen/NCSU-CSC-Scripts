@@ -110,6 +110,15 @@ java -classpath $CHECKSTYLE_JAR -Dindent_level=$INDENT_LEVEL $CHECKSTYLE_CLASS -
 xsltproc -o style.html XML_CSS.xsl output.xml
 
 # And we use a third party 
-~/wkhtmltox/bin/wkhtmltopdf style.html style.pdf
+
+if [ ! -d ~/wkhtmltox/ ]; then
+    echo "ERR: wkhtmltox converter does not exist in ~/"
+    echo "Please install wkhtmltox in ~/ for PDF output."
+    echo "HTML and XML output is still created."
+else
+    ~/wkhtmltox/bin/wkhtmltopdf style.html style.pdf
+fi
+
+
 
 exit 0 
