@@ -298,6 +298,56 @@ public class GenerateReport {
         outputLine += uknownError + "\n";
         writer.write(outputLine);
         
+        String summary = "";
+     
+        if ( numTabLines != 0 ) {
+            summary += "Tab characters detected. ";
+        }
+        
+        if ( numIncInden != 0 ) {
+            summary += "Incorrect indentation detected. ";
+        }
+        
+        if ( numWtsMisng != 0 ) {
+            summary += "Whitespace errors detected. ";
+        }
+        
+        if ( numRetMisng != 0 ) {
+            summary += "Missing @return tags. ";
+        }
+        
+        if ( numParMisng != 0 ) {
+            summary += "Missing @return tags. ";
+        }
+        
+        if ( numLongLine != 0 ) {
+            summary += "Lines over 100 characters detected. ";
+        }
+        
+        if ( numTypWrong != 0 ) {
+            summary += "Types incorrectly named. ";
+        }
+        
+        if ( numCstWrong != 0 ) {
+            summary += "Constants incorrectly named. ";
+        }
+        
+        if ( numMtdWrong != 0 ) {
+            summary += "Methods incorrectly named. ";
+        }
+        
+        if ( numPrmWrong != 0 ) {
+            summary += "Parameters incorrectly named. ";
+        }
+        
+        if ( uknownError != 0 ) {
+            summary += "Unknown errors detected. ";  //wat
+        }
+        
+        writer.write("--------------------------------------------------\n");
+        
+        writer.write(summary + "\n");
+        
         writer.flush();
     }
     
