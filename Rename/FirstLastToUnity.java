@@ -65,11 +65,11 @@ public class FirstLastToUnity {
             students[i] = initStudents[i];
         }
         
-        if ( students.length != folders.length ) {
+        /*if ( students.length != folders.length ) {
             System.out.println("Something broke; number of folders does not match " + 
                 "number of mapped students; probably fewer folders.");
             
-        }
+        }*/
         
         //Never use initStudents beyond this point - contains null values we don't handle.
         
@@ -81,13 +81,30 @@ public class FirstLastToUnity {
     
     public static void findDirectory(File[] folders, Student s, File folder) {
     
-        for ( int i = 0; i < folders.length; i++ ) {
+        for ( File f : folders ) {
+            String baseName = f.getName().substring(f.getName().indexOf("grading")+1);
+            //System.out.println(baseName + " " + s.Last_FirstDirectory());
+            //System.out.println(baseName.equals(s.Last_FirstDirectory()));
+            
+            if ( baseName.equals(s.unityDirectory()) ) {
+                return;
+            }
+            
+            
+            if ( baseName.equals(s.Last_FirstDirectory()) ) {
+                System.out.println("Found directory for " + s.getName());
+                f.renameTo(new File(folder, s.unityDirectory()));
+                return;
+            }
+        }
+    
+        /*for ( int i = 0; i < folders.length; i++ ) {
             if ( folders[i].getName().equals(s.Last_FirstDirectory()) ) {
                 System.out.println("Found directory for " + s.getName());
                 folders[i].renameTo(new File(folder, s.unityDirectory()));
                 return;
             }
-        }
+        }*/
         System.out.println("Could not find directory for " + s.getName());
         
         
@@ -100,10 +117,10 @@ public class FirstLastToUnity {
         private String email;
         private String unityID;
         
-        public Student(String lastName, String firstName, String email) {
+        public Student(String firstName, String lastName, String email) {
         
-            this.firstName = firstName;
             this.lastName = lastName;
+            this.firstName = firstName;
             this.email = email;
             
             int atIndex = email.indexOf("@");
