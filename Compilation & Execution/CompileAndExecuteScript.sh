@@ -24,7 +24,6 @@
 # Note: This program optionally expects an expected file AND        #
 #   an input file, or just an expected file.  It will not work      #
 #   with only an input file.                                        #
-#   same directory.                                                 #
 # Note: This script benefits greatly from GenerateReport.java       #
 #   (another of my scripts) by summarizing the six (!) output files #
 #   from compilation and whatnot.                                   #
@@ -117,7 +116,7 @@ compileAndExecuteAndStyle() {
     #But reading is probably important.
     #Does -r imply -f?
     if [ ! -r $COMP_FILENAME ]; then
-        echo "ERR: $COMP_FILENAME not found or could not be read."
+        echo "${bold}ERR:${normal} $COMP_FILENAME not found or could not be read."
         echo ${PWD##*/}
         return
     fi
@@ -144,27 +143,20 @@ compileAndExecuteAndStyle() {
     
     #Make sure we compiled and were able to output to files.
     if [ ! -r $COMP_OUTPUT ]; then
-        echo "ERR: Could not create output file for compilation."
+        echo "${bold}ERR:${normal} Could not create output file for compilation."
         echo "Exiting program with status 2"
         exit 2
     fi
     
     if [ ! -r $COMP_OUTPUT_ERROR ]; then
-        echo "ERR: Could not create output file for compilation error."
+        echo "${bold}ERR:${normal} Could not create output file for compilation error."
         echo "Exiting program with status 2"
         exit 2
     fi
     
     #Check if there were compilation errors.
     if [ $(stat -c%s output_compile_error.txt) -gt 0 ]; then
-        echo "ERR: Compilation errors detected.  Would you like to continue? (y\n)"
-        read confirmation
-        if [ "$confirmation" != "y" ]; then
-            echo "Exiting program with status 3."
-            exit 3
-        else 
-            echo "NOTE: Continuing.  Errors may compound."
-        fi
+        echo "${bold}ERR:${normal} Compilation errors detected.  Errors may compound."
     else
         echo "NOTE: No compilation errors detected."
     fi
@@ -188,7 +180,7 @@ compileAndExecuteAndStyle() {
     #Do comparisons for errors during executions.
     #I think this might only happen if you have errors during compilation.
     if [ $(stat -c%s output_execute_error.txt) -gt 0 ]; then
-        echo "ERR: Execution errors detected."
+        echo "${bold}ERR:${normal} Execution errors detected."
         echo "NOTE: Continuing.  Errors may compound."
     else
         echo "NOTE: No execution errors detected."
@@ -217,7 +209,7 @@ NOTE: Press any key to continue
     echo "NOTE: This program assumes your style checker exists in ~/cs/."
     
     if [ ! -d ~/cs/ ]; then
-        echo "ERR: Could not find checkstyle in ~/cs/.  Please install Checkstyle to ~/cs/"
+        echo "${bold}ERR:${normal} Could not find checkstyle in ~/cs/.  Please install Checkstyle to ~/cs/"
         echo "Exiting program with status 5"
         exit 5
     fi
@@ -225,7 +217,7 @@ NOTE: Press any key to continue
     ~/cs/checkstyle $COMP_FILENAME > output_style.txt 2> output_style_error.txt
     
     if [ $(stat -c%s output_style_error.txt) -gt 0 ]; then
-        echo "ERR: Errors occured while checking style.  Details in output_style_error.txt"
+        echo "${bold}ERR:${normal} Errors occured while checking style.  Details in output_style_error.txt"
     fi
     
     #This is some funky math.
@@ -261,9 +253,13 @@ myDir=$(pwd)
 #Don't forget to change directory to wherever we are.
 cd "$(dirname "$0")"
 
+#Setting up for bolding error messages.
+bold=$(tput bold)
+normal=$(tput sgr0)
+
 #Check if user supplied a file as an argument.
 if [ $# -lt 3 ]; then
-    echo "ERR: Below minimum argument count."
+    echo "${bold}ERR:${normal} Below minimum argument count."
     echo "Expected [something].java [folder of assignments] Rename [y/n]"
     echo "Optional arguments following: [expected output] [inputFile]"
     echo "Exiting program with status 0."
@@ -271,7 +267,7 @@ if [ $# -lt 3 ]; then
 fi
 
 if [ $# -gt 5 ]; then
-    echo "ERR: Above maximum argument count."
+    echo "${bold}ERR:${normal} Above maximum argument count."
     echo "Expected [something].java [folder of assignments] Rename [y/n]"
     echo "Optional arguments following: [expected output] [inputFile]"
     echo "Exiting program with status 0."
@@ -279,9 +275,8 @@ if [ $# -gt 5 ]; then
 fi
 
 #Making sure Argument 1 is a java file.  Or has a java extension at least.
-#Grep as suggested by Curtis Moore.  Everyone can thank Curtis more.
-if grep -q "*.java" <<<$1; then
-    echo "ERR: Java file argument lacks java extension."
+if grep -q $1 <<<".java"; then
+    echo "${bold}ERR:${normal} Java file argument lacks java extension."
     echo "Exiting program with status 0."
     exit 0
 fi
@@ -291,7 +286,7 @@ COMP_FILENAME="$1"
 
 #Making sure argument 2 is a directory.
 if [ ! -d $2 ]; then
-    echo "ERR: Argument 2 is not a directory."
+    echo "${bold}ERR:${normal} Argument 2 is not a directory."
     echo "Exiting program with status 0."
     exit 0
 fi
@@ -305,14 +300,14 @@ RENAME_VAR=${RENAME_VAR,,}
 
 #Check if the value, after lowercase conversion, is y or n.
 if [ "$RENAME_VAR" != "y" ] && [ "$RENAME_VAR" != "n" ]; then
-    echo "ERR: Argument 3 is not y or n.  Will not take command."
+    echo "${bold}ERR:${normal} Argument 3 is not y or n.  Will not take command."
     echo "Exiting program with status 0."
     exit 0
 fi
 
 if [ "$RENAME_VAR" == "y" ]; then
     if [ ! -r "RenameScript.java" ]; then
-        echo "ERR: RenameScript.java does not exist."
+        echo "${bold}ERR:${normal} RenameScript.java does not exist."
         echo "Exiting program with status 0."
         exit 0
     fi
@@ -325,7 +320,7 @@ HAVE_INPUT=false
 
 if [ $# -ge 4 ]; then
     if [ ! -r $4  ]; then
-        echo "ERR: Expected output file does not exist."
+        echo "${bold}ERR:${normal} Expected output file does not exist."
         echo "Exiting program with status 0."
         exit 0
     else
@@ -335,7 +330,7 @@ if [ $# -ge 4 ]; then
         EXPECTED_FILE=$myDir/$4
     fi
     if [ $# == 5 ] && [ ! -r $5 ]; then
-        echo "ERR: Input file does not exist."
+        echo "${bold}ERR:${normal} Input file does not exist."
         echo "Exiting program with status 0."
         exit 0
     else
@@ -364,16 +359,9 @@ for d in *; do
                 echo "NOTE: Generating Report based on output files."
                 java -classpath $myDir GenerateReport $myDir/$2/"${d}"  
             fi
-            
-            #Does not function.
-            #if [ -f $myDir/"checkstyletohtmlpdf.sh" ]; then
-            #    echo "--------------------------------------------------------"
-            #    echo "NOTE: Generating Style Report based on output files."
-            #    sh $myDir/checkstyletohtmlpdf.sh $myDir/$2"${d}"/$COMP_FILENAME
-            #fi
 			sleep 1
         else
-            echo "Err: File does not exist"
+            echo "${bold}ERR:${normal} File does not exist"
         fi
         cd ..
     fi
