@@ -12,7 +12,6 @@
 #                     directory of student programs.                #
 #                       Use rename script if they aren't in their   #
 #                       own directories before running script.      #
-#                     y/n, whether to use Renaming Script or not    #
 #                                                                   #
 # Optional arguments: expected output file for comparison           #
 #                     input file for stdin                          #
@@ -258,17 +257,17 @@ bold=$(tput bold)
 normal=$(tput sgr0)
 
 #Check if user supplied a file as an argument.
-if [ $# -lt 3 ]; then
+if [ $# -lt 2 ]; then
     echo "${bold}ERR:${normal} Below minimum argument count."
-    echo "Expected [something].java [folder of assignments] Rename [y/n]"
+    echo "Expected [something].java [folder of assignments]"
     echo "Optional arguments following: [expected output] [inputFile]"
     echo "Exiting program with status 0."
     exit 0
 fi
 
-if [ $# -gt 5 ]; then
+if [ $# -gt 4 ]; then
     echo "${bold}ERR:${normal} Above maximum argument count."
-    echo "Expected [something].java [folder of assignments] Rename [y/n]"
+    echo "Expected [something].java [folder of assignments]"
     echo "Optional arguments following: [expected output] [inputFile]"
     echo "Exiting program with status 0."
     exit 0
@@ -291,35 +290,29 @@ if [ ! -d $2 ]; then
     exit 0
 fi
 
-#Making sure argument 3 is y or n
 
-#Trying to compress this to RENAME_VAR=${$3,,} causes a bad substitution error.
-#So we have to be a bit inefficient with it
-RENAME_VAR=$3
-RENAME_VAR=${RENAME_VAR,,}
+#Shamelessly stolen from stackoverflow, as per 90% of any production code is.
+directoryCount=`find $2/* -maxdepth 1 -type d | wc -l`
 
-#Check if the value, after lowercase conversion, is y or n.
-if [ "$RENAME_VAR" != "y" ] && [ "$RENAME_VAR" != "n" ]; then
-    echo "${bold}ERR:${normal} Argument 3 is not y or n.  Will not take command."
-    echo "Exiting program with status 0."
-    exit 0
-fi
-
-if [ "$RENAME_VAR" == "y" ]; then
+if [ $directoryCount -eq 0 ]; then
+    echo "NOTE: Did not detect subdirectories in $2, running RenameScript if it exists."
     if [ ! -r "RenameScript.java" ]; then
         echo "${bold}ERR:${normal} RenameScript.java does not exist."
-        echo "Exiting program with status 0."
+        echo "Could not rename files.  Exiting program with status 0"
         exit 0
+    else
+        #Note to futuer self - make it detected whether to run javac or java only.
+        javac RenameScript.java; java RenameScript $2
     fi
-    #TODO: do this in the script/a separate script
-    javac RenameScript.java; java RenameScript $2
+else
+    echo "NOTE: Subdirectories detected in $2, RenameScript will not be executed."
 fi
 
 HAVE_OUTPUT=false
 HAVE_INPUT=false
 
-if [ $# -ge 4 ]; then
-    if [ ! -r $4  ]; then
+if [ $# -ge 3 ]; then
+    if [ ! -r $3  ]; then
         echo "${bold}ERR:${normal} Expected output file does not exist."
         echo "Exiting program with status 0."
         exit 0
@@ -327,15 +320,15 @@ if [ $# -ge 4 ]; then
         HAVE_OUTPUT=true
         
         #Because, for some reason, doing just $myDir/$4 doesn't work.
-        EXPECTED_FILE=$myDir/$4
+        EXPECTED_FILE=$myDir/$3
     fi
-    if [ $# == 5 ] && [ ! -r $5 ]; then
+    if [ $# == 4 ] && [ ! -r $4 ]; then
         echo "${bold}ERR:${normal} Input file does not exist."
         echo "Exiting program with status 0."
         exit 0
     else
         HAVE_INPUT=true
-        INPUT_FILE=$myDir/$5
+        INPUT_FILE=$myDir/$4
     fi
 fi
 
