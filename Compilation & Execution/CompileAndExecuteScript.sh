@@ -103,6 +103,7 @@
 #              GenerateReport is currently required, will make      #
 #              optional once I get to a proper terminal.            #
 #              Fixed checking for Stylechecker                      #
+#   v1.2 - 16/11/10 - RenameScript is automatically run when needed #
 #                                                                   #
 #####################################################################
 
