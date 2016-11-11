@@ -7,6 +7,7 @@ import java.nio.file.*;
  * readable version.  Does not print the lines of the error - will refactor code to do that.
  * Similar to GenerateReports, however, this will only generate a single report, for a single
  * student submission.
+ * BE VERY CAREFUL WITH THIS PROGRAM - IT DELETES FILES AND I'M NOT RESPONSIBLE FOR ANY DAMAGES.
  * @author Samuel Schoeneberger
  */
 public class GenerateReport {
@@ -141,6 +142,18 @@ public class GenerateReport {
             writer.flush();
             
         }
+		
+		//VERY DANGEROUS: DELETING FILES.
+		//BE VERY CAREFUL.
+		//SERIOUSLY.
+		System.out.println(files.length);
+		for ( int i = 0; i < files.length; i++ ) {
+			System.out.println(files[i].getName());
+			System.out.println(files[i].getPath());
+			if ( !files[i].getName().equals("output_style.txt") ) {
+				files[i].delete();
+			}
+		}
     
     }
 
