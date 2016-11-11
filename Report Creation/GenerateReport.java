@@ -148,8 +148,8 @@ public class GenerateReport {
 		//SERIOUSLY.
 		System.out.println(files.length);
 		for ( int i = 0; i < files.length; i++ ) {
-			System.out.println(files[i].getName());
-			System.out.println(files[i].getPath());
+			//System.out.println(files[i].getName());
+			//System.out.println(files[i].getPath());
 			if ( !files[i].getName().equals("output_style.txt") ) {
 				files[i].delete();
 			}
