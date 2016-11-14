@@ -16,3 +16,12 @@ Index:
   * Requires user editing to function.  Next level laziness.
   * It's a shell of a program, that loops through directories in a directory argument.
   * Execution: sh directoryOrder.sh Directory/
+
+* methodPrinter.java
+  * Written by Samuel Schoeneberger (spschoen@ncsu.edu)
+  * Java
+  * Functional.
+  * Will read through a file, and print a method.  Specifically a Java file.
+  * Best used with directoryOrder.sh
+    * Execution for directoryOrder.sh use: java -classpath $myDir methodPrinter $myDir/$1"${d}"/"FileToScan.extension"
+  * Execution: java methodPrinter FileToScan.extension
