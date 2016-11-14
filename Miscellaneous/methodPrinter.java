@@ -17,18 +17,19 @@ public class methodPrinter {
 	public static void main(String[] args) {
 	
 		if ( args.length != 1 ) {
-			System.out.println("rip");
+			System.out.println("rip1");
 			System.exit(1);
 		}
 	
 		Scanner in = new Scanner(System.in);
 		System.out.print("Method name: ");
 		String methodName = in.next();
+		System.out.println();
 		
 		String dir = args[0];
 		File f = new File(dir);
 		if ( !f.exists() ) {
-			System.out.println("rip");
+			System.out.println("rip2");
 			System.exit(1);
 		}
 		
@@ -36,7 +37,7 @@ public class methodPrinter {
 		try {
 			fi = new Scanner(f);
 		} catch (Exception e) {
-			System.out.println("rip");
+			System.out.println("rip3");
 			System.exit(1);
 		}
 		
@@ -44,8 +45,12 @@ public class methodPrinter {
 		boolean gottem = false;
 		while ( fi.hasNextLine() ) {
 			String s = fi.nextLine();
-			if ( ( s.contains("public") || s.contains("private") || s.conatins("protected") )
+			if ( ( s.contains("public") || s.contains("private") || s.contains("protected") )
 					&& s.contains(methodName) ) {
+				while ( !s.contains("{") ) {
+					System.out.println(s);
+					s = fi.nextLine();
+				}
 				gottem = true;
 			}
 			
