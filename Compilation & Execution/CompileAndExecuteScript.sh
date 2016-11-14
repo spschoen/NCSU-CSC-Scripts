@@ -104,6 +104,7 @@
 #              optional once I get to a proper terminal.            #
 #              Fixed checking for Stylechecker                      #
 #   v1.2 - 16/11/10 - RenameScript is automatically run when needed #
+#   v1.3 - 16/11/13 - Diff will now output to diff_output.txt       #
 #                                                                   #
 #####################################################################
 
@@ -203,6 +204,9 @@ NOTE: Press any key to continue
 "
         
         echo "--------------------------------------------------------"
+        
+        rm -f diff_output.txt
+        diff $EXPECTED_FILE output_execute.txt > diff_output.txt
     fi
     
     echo "NOTE: Automated Style Checker executing."
@@ -360,5 +364,9 @@ for d in *; do
         cd ..
     fi
 done
+
+clear
+
+echo "Compilation complete."
 
 exit 0 
