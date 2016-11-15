@@ -45,8 +45,7 @@ public class methodPrinter {
 		boolean gottem = false;
 		while ( fi.hasNextLine() ) {
 			String s = fi.nextLine();
-			if ( ( s.contains("public") || s.contains("private") || s.contains("protected") )
-					&& s.contains(methodName) ) {
+			if ( !s.contains(";") && s.contains(methodName) ) {
 				while ( !s.contains("{") ) {
 					System.out.println(s);
 					s = fi.nextLine();
