@@ -12,14 +12,15 @@ public class FirstLastToUnity {
 
     public static void main(String[] args) {
     
-        if ( args.length != 2 ) {
+        if ( args.length != 1 && args.length != 2 ) {
         
-            System.out.println("Expected execution: java FirstLastToUnity mapping.txt Directory/");
+            System.out.println("Expected execution: java FirstLastToUnity Directory/");
+            System.out.println("Optional execution: java FirstLastToUnity Directory/ mapping.txt");
             System.exit(1);
         
         }
         
-        File folder = new File(args[1]);
+        File folder = new File(args[0]);
         
         if ( !folder.isDirectory() ) {
             System.out.println("Error: supplied directory not a directory.");
@@ -28,11 +29,45 @@ public class FirstLastToUnity {
         
         //Folders inside the directory
         File[] folders = folder.listFiles();
+        boolean isMapped = true;
+        for ( int i = 0; i < folders.length; i++ ) {
+            if ( folders[i].getName().length() > 8 ) {
+                isMapped = false;
+                break;
+            }
+        }
+        
+        if ( isMapped ) {
+            System.out.println("Folders already mapped, program will exit.");
+            System.exit(1);
+        }
+        
+        File mapping = null;
+        
+        try {
+            mapping = new File("mapping.txt");
+        } catch (Exception e) {
+            System.out.println("Could not find default mapping.txt, ");
+        }
+        
+        if ( mapping == null && args.length >= 1 ) {
+            try {
+                mapping = new File(args[1]);
+            } catch (Exception e) {
+                System.out.println("Could not access given mapping file.  Exiting.");
+                System.exit(1);
+            }
+        }
+        
+        if ( mapping == null ) {
+            System.out.println("How?");
+            System.exit(1);
+        }
         
         Scanner names = null;
         
         try {
-            names = new Scanner(new File(args[0]));
+            names = new Scanner(mapping);
         } catch (Exception e) {
             System.out.println(e.getMessage());
             System.exit(1);
