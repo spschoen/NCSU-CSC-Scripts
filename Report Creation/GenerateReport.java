@@ -7,7 +7,6 @@ import java.nio.file.*;
  * readable version.  Does not print the lines of the error - will refactor code to do that.
  * Similar to GenerateReports, however, this will only generate a single report, for a single
  * student submission.
- * BE VERY CAREFUL WITH THIS PROGRAM - IT DELETES FILES AND I'M NOT RESPONSIBLE FOR ANY DAMAGES.
  * @author Samuel Schoeneberger
  */
 public class GenerateReport {
@@ -142,18 +141,6 @@ public class GenerateReport {
             writer.flush();
             
         }
-		
-		//VERY DANGEROUS: DELETING FILES.
-		//BE VERY CAREFUL.
-		//SERIOUSLY.
-		System.out.println(files.length);
-		for ( int i = 0; i < files.length; i++ ) {
-			//System.out.println(files[i].getName());
-			//System.out.println(files[i].getPath());
-			if ( !files[i].getName().equals("output_style.txt") ) {
-				files[i].delete();
-			}
-		}
     
     }
 
@@ -165,6 +152,7 @@ public class GenerateReport {
         int numWtsMisng = 0;
         int numRetMisng = 0;
         int numParMisng = 0;
+		int numTrwMisng = 0;
         int numMgcNumbr = 0;
         int numTypWrong = 0;
         int numCstWrong = 0;
@@ -224,6 +212,8 @@ public class GenerateReport {
                 numRetMisng++;
             } else if ( line.contains("@param") ) {
                 numParMisng++;
+            } else if ( line.contains("@throws") ) {
+                numTrwMisng++;
             } else if ( line.contains("magic") ) {
                 numMgcNumbr++;
             } else if ( line.contains("match pattern") ) {
@@ -244,12 +234,13 @@ public class GenerateReport {
 				numLongLine++;
 			} else {
 				uknownError++;
+				writer.write("UNKNOWN STYLE ERROR:\n");
+				writer.write(line + "\n");
 			}
             
         }
         
-        String initOutput = "Style Report for " + javaFileName + "\n";
-        writer.write(initOutput);
+        writer.write("Style Report for " + javaFileName + "\n");
         
         if ( !hasAuthorTag ) {
             writer.write("File lacks an @author Tag.\n");
@@ -267,20 +258,8 @@ public class GenerateReport {
             writer.write("Warning: Incorrect indentation could be due to tab characters.\n");
         }
         
-        outputLine = "Lines with missing Javadoc Comments: ";
-        outputLine += numJvdMisng + "\n";
-        writer.write(outputLine);
-        
         outputLine = "Whitespace errors (operators/loops): ";
         outputLine += numWtsMisng + "\n";
-        writer.write(outputLine);
-        
-        outputLine = "Missing/Incorrect @return tags     : ";
-        outputLine += numRetMisng + "\n";
-        writer.write(outputLine);
-        
-        outputLine = "Missing/Incorrect @param tags      : ";
-        outputLine += numParMisng + "\n";
         writer.write(outputLine);
         
         outputLine = "Detected magic numbers             : ";
@@ -310,56 +289,25 @@ public class GenerateReport {
         outputLine = "Number of unknown errors detected  : ";
         outputLine += uknownError + "\n";
         writer.write(outputLine);
+		
+		writer.write("--------------------------------------------------\n");
+        writer.write("Javadoc Report for " + javaFileName + "\n");
+		
+        outputLine = "Lines with missing Javadoc Comments: ";
+        outputLine += numJvdMisng + "\n";
+        writer.write(outputLine);
         
-        String summary = "";
-     
-        if ( numTabLines != 0 ) {
-            summary += "Tab characters detected. ";
-        }
+        outputLine = "Missing/Incorrect @return tags     : ";
+        outputLine += numRetMisng + "\n";
+        writer.write(outputLine);
         
-        if ( numIncInden != 0 ) {
-            summary += "Incorrect indentation detected. ";
-        }
+        outputLine = "Missing/Incorrect @param tags      : ";
+        outputLine += numParMisng + "\n";
+        writer.write(outputLine);
         
-        if ( numWtsMisng != 0 ) {
-            summary += "Whitespace errors detected. ";
-        }
-        
-        if ( numRetMisng != 0 ) {
-            summary += "Missing @return tags. ";
-        }
-        
-        if ( numParMisng != 0 ) {
-            summary += "Missing @return tags. ";
-        }
-        
-        if ( numLongLine != 0 ) {
-            summary += "Lines over 100 characters detected. ";
-        }
-        
-        if ( numTypWrong != 0 ) {
-            summary += "Types incorrectly named. ";
-        }
-        
-        if ( numCstWrong != 0 ) {
-            summary += "Constants incorrectly named. ";
-        }
-        
-        if ( numMtdWrong != 0 ) {
-            summary += "Methods incorrectly named. ";
-        }
-        
-        if ( numPrmWrong != 0 ) {
-            summary += "Parameters incorrectly named. ";
-        }
-        
-        if ( uknownError != 0 ) {
-            summary += "Unknown errors detected. ";  //wat
-        }
-        
-        writer.write("--------------------------------------------------\n");
-        
-        writer.write(summary + "\n");
+        outputLine = "Missing/Incorrect @throws tags     : ";
+        outputLine += numTrwMisng + "\n";
+        writer.write(outputLine);
         
         writer.flush();
     }
