@@ -104,7 +104,6 @@
 #              optional once I get to a proper terminal.            #
 #              Fixed checking for Stylechecker                      #
 #   v1.2 - 16/11/10 - RenameScript is automatically run when needed #
-#   v1.3 - 16/11/17 - Integrated FirstLastToUnity usage.            #
 #                                                                   #
 #####################################################################
 
@@ -215,6 +214,7 @@ NOTE: Press any key to continue
         exit 5
     fi
     
+    echo $COMP_FILENAME_WITHOUT_JAVA > output_style.txt
     ~/cs/checkstyle $COMP_FILENAME > output_style.txt 2> output_style_error.txt
     
     if [ $(stat -c%s output_style_error.txt) -gt 0 ]; then
