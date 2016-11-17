@@ -104,6 +104,7 @@
 #              optional once I get to a proper terminal.            #
 #              Fixed checking for Stylechecker                      #
 #   v1.2 - 16/11/10 - RenameScript is automatically run when needed #
+#   v1.3 - 16/11/17 - Integrated FirstLastToUnity usage.            #
 #                                                                   #
 #####################################################################
 
