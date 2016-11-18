@@ -194,7 +194,7 @@ capFast() {
         diff -y $EXPECTED_FILE output_execute.txt >> output_fast.txt
         
     fi
-	
+    
 }
 
 compileAndExecuteAndStyle() {
@@ -321,7 +321,7 @@ NOTE: Press any key to continue
     else
         echo "NOTE: No style errors detected.  Great!"
     fi
-	
+    
 }
 
 #####################################################################
@@ -329,9 +329,6 @@ NOTE: Press any key to continue
 #     Privacy divider.  Please respect the privacy of the code.     #
 #                                                                   #
 #####################################################################
-
-#Cleaning everything up.
-clear
 
 #Quick sleep just because.
 sleep 0.25
@@ -346,110 +343,142 @@ cd "$(dirname "$0")"
 bold=$(tput bold)
 normal=$(tput sgr0)
 
-#Check if user supplied a file as an argument.
-if [ $# -lt 2 ]; then
-    echo "${bold}ERR:${normal} Below minimum argument count."
-    echo "Expected [something].java [folder of assignments]"
-    echo "Optional arguments following: [expected output] [inputFile] [y/n go fast]"
-    echo "Exiting program with status 0."
+if [ $# -eq 0 ]; then
+    echo "You must specify a dialog type. Use '-h' or '--help' for details"
     exit 0
 fi
 
-if [ $# -gt 5 ]; then
-    echo "${bold}ERR:${normal} Above maximum argument count."
-    echo "Expected [something].java [folder of assignments]"
-    echo "Optional arguments following: [expected output] [inputFile] [y/n go fast]"
-    echo "Exiting program with status 0."
+if [ $1 == "-h" ] || [ $1 == "--help" ] || [ $1 == "--h" ]; then
+    echo "Usage:
+sh CompileAndExecuteScript.sh [OPTION...]
+
+Help Options:
+  -h, --help                    Show help options
+
+Application Options:
+  -p, --program                 REQUIRED: Java program to evaluate.
+  -d, --dir                     REQUIRED: Directory of submissions to evaluate.
+  -e, --expected                Expected output from Java program.
+  -i, --input                   Input file for Java Programs.  Requires -e option as well.
+  -q, --quick                   Informing the program to run fast.
+  -f, --fast                    Same as -q option.
+"
     exit 0
 fi
 
-#Making sure Argument 1 is a java file.  Or has a java extension at least.
-if grep -q $1 <<<".java"; then
-    echo "${bold}ERR:${normal} Java file argument lacks java extension."
-    echo "Exiting program with status 0."
-    exit 0
+CAP_FAST="n"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -p) COMP_FILENAME="$2"; shift 2;;
+    -d) DIRECTORY="$2"; shift 2;;
+    -e) EXPECTED_FILE="$2"; shift 2;;
+    -i) INPUT_FILE="$2"; shift 2;;
+    -q) CAP_FAST="y"; shift 1;;
+    -f) CAP_FAST="y"; shift 1;;
+
+    --program=*) COMP_FILENAME="${1#*=}"; shift 1;;
+    --dir=*) DIRECTORY="${1#*=}"; shift 1;;
+    --expected=*) EXPECTED_FILE="${1#*=}"; shift 1;;
+    --input=*) INPUT_FILE="${1#*=}"; shift 1;;
+    --quick=*) CAP_FAST="y"; shift 1;;
+    --fast=*) CAP_FAST="y"; shift 1;;
+    --program|--dir|--expected|--input) echo "$1 requires an argument" >&2; exit 1;;
+
+    -*) echo "unknown option: $1" >&2; exit 1;;
+    *) echo "unrecognized argument: $1"; exit 0
+  esac
+done
+
+echo $EXPECTED_FILE
+echo $INPUT_FILE
+echo $CAP_FAST
+
+exit 0
+
+#Check if size of java file is 0
+if [ ${#COMP_FILENAME} == 0 ]; then
+    echo "test 1"
+else
+    #Making sure Argument 1 is a java file.  Or has a java extension at least.
+    if  [[ $COMP_FILENAME != *.java ]]; then
+        echo "${bold}ERR:${normal} Java file argument lacks java extension."
+        echo "Exiting program with status 0."
+        exit 0
+    fi
 fi
 
-#We're sure it's a java file, so we go ahead and assign a value.
-COMP_FILENAME="$1"
-
-#Making sure argument 2 is a directory.
-if [ ! -d $2 ]; then
-    echo "${bold}ERR:${normal} Argument 2 is not a directory."
-    echo "Exiting program with status 0."
-    exit 0
+if [ ${#DIRECTORY} == 0 ]; then
+    echo "test 2"
+else
+    #Making sure argument 2 is a directory.
+    if [ ! -d $DIRECTORY ]; then
+        echo "${bold}ERR:${normal} Argument 2 is not a directory."
+        echo "Exiting program with status 0."
+        exit 0
+    fi
 fi
+
+#Cleaning everything up.
+clear
 
 #Shamelessly stolen from stackoverflow, as per 90% of any production code is.
-directoryCount=`find $2/* -maxdepth 1 -type d | wc -l`
+directoryCount=`find $DIRECTORY/* -maxdepth 1 -type d | wc -l`
 
 if [ $directoryCount -eq 0 ]; then
-    echo "NOTE: Did not detect subdirectories in $2, running RenameScript if it exists."
+    echo "NOTE: Did not detect subdirectories in $DIRECTORY, running RenameScript if it exists."
     if [ ! -r "RenameScript.java" ]; then
         echo "${bold}ERR:${normal} RenameScript.java does not exist."
         echo "Could not rename files.  Exiting program with status 0"
         exit 0
     else
         #Note to futuer self - make it detected whether to run javac or java only.
-        javac RenameScript.java; java RenameScript $2
+        javac RenameScript.java; java RenameScript $DIRECTORY
     fi
 else
-    echo "NOTE: Subdirectories detected in $2, RenameScript will not be executed."
+    echo "NOTE: Subdirectories detected in $DIRECTORY, RenameScript will not be executed."
 fi
 
 if [ -r "FirstLastToUnity.java" ] && [ -r "mapping.txt" ]; then
     echo "Running UnityID Mapper."
-    javac FirstLastToUnity.java; java FirstLastToUnity $2
+    javac FirstLastToUnity.java; java FirstLastToUnity $DIRECTORY
     sleep 1
 fi
 
 HAVE_OUTPUT=false
 HAVE_INPUT=false
 
-if [ $# -ge 3 ]; then
-    if [ ! -r $3  ]; then
+if [ ${#EXPECTED_FILE} != 0 ]; then
+    EXPECTED_FILE=$myDir/$EXPECTED_FILE
+    if [ ! -r $EXPECTED_FILE ]; then
         echo "${bold}ERR:${normal} Expected output file does not exist."
         echo "Exiting program with status 0."
         exit 0
     else
         HAVE_OUTPUT=true
-        
-        #Because, for some reason, doing just $myDir/$4 doesn't work.
-        EXPECTED_FILE=$myDir/$3
     fi
-    if [ $# -gte 5 ] && [ ! -r $4 ]; then
-        echo "${bold}ERR:${normal} Input file does not exist."
-        echo "Exiting program with status 0."
-        exit 0
-    else
-        HAVE_INPUT=true
-        INPUT_FILE=$myDir/$4
+    
+    #We can only have an input file if we have an output file.
+    if [ ${#INPUT_FILE} != 0 ]; then
+        INPUT_FILE=$myDir/$INPUT_FILE
+        if [ ! -r $EXPECTED_FILE ]; then
+            echo "${bold}ERR:${normal} Input file does not exist."
+            echo "Exiting program with status 0."
+            exit 0
+        else
+            HAVE_INPUT=true
+        fi
     fi
 fi
 
 CAP_FAST="n"
 
-if [ $# -eq 5 ]; then
-    #Making sure argument 5 is y or n		  
-    #Trying to compress this to CAP_FAST=${$3,,} causes a bad substitution error.
-    #So we have to be a bit inefficient with it
-    CAP_FAST=$5		
-    CAP_FAST=${CAP_FAST,,}		
-              
-    #Check if the value, after lowercase conversion, is y or n.
-    if [ "$CAP_FAST" != "y" ] && [ "$CAP_FAST" != "n" ]; then
-        echo "${bold}ERR:${normal} Argument 3 is not y or n.  Will not take command."		
-        echo "Exiting program with status 0."		
-        exit 0		
-    fi
-fi
-
 #Change directory to the directory of many folders.
 #Life has many directories edboy
 #Note to future self: this has to be last, because of file checks.
-cd $2
+cd $DIRECTORY
 
-#The working loop.  Loops through each directory in the $2 directory,
+#The working loop.  Loops through each directory in the supplied directory,
 #And runs the compilation function on it, with the filename argument.
 for d in *; do
     #check if * is a directory, not a file
@@ -458,7 +487,7 @@ for d in *; do
         if [ -r $COMP_FILENAME ]; then
             clear
             echo "NOTE: Current working directory: ${d}"
-            if [ "$CAP_FAST" == "y" ]; then		
+            if [ "$CAP_FAST" == "y" ]; then        
                 capFast "$COMP_FILENAME"
             else
                 compileAndExecuteAndStyle "$COMP_FILENAME"
@@ -468,7 +497,7 @@ for d in *; do
                     java -classpath $myDir GenerateReport $myDir/$2/"${d}"  
                 fi
             fi
-			sleep 1
+            sleep 1
         else
             echo "${bold}ERR:${normal} File does not exist"
         fi
@@ -478,5 +507,4 @@ done
 
 cd $myDir
 
-exit 0 
-
+exit 0
