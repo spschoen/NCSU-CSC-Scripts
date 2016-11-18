@@ -5,29 +5,34 @@
 # Moodle.  Generates 2 output files for each step - an              #
 # output_[step].txt file, and an output_[step]_error.txt file,      #
 # both from stdout and stderr.                                      #
-# Also generates a report based on output files.  Read that,        #
-# and ignore the rest.                                              #
+# Also generates a report based on output files if you have         #
+# GenerateReports.java in the same directory, which generates       #
+# a Report.txt file for each submission                             #
 #                                                                   #
-# Arguments expected: .java file to compile                         #
-#                     directory of student programs.                #
-#                       Use rename script if they aren't in their   #
-#                       own directories before running script.      #
+# Required Arguments: .java file to compile                         #
+#                      directory of student programs.               #
 #                                                                   #
-# Optional arguments: expected output file for comparison           #
-#                     input file for stdin                          #
+# Optional Arguments:  expected output file for comparison          #
+#                      input file for stdin                         #
+#                      y or n (or nothing) for fast script          #
 #                                                                   #
-# Use: sh CompileAndExecuteScript file.java folder/                 #
+# Use: sh CompileAndExecuteScript file.java dir/ [optional args]    #
+#                                                                   #
 # Note: This script assumes you have Zach Butler &                  #
 #   Dr. Jessica Schmidt's RenameScript program in the               #
 #   same directory.                                                 #
+#                                                                   #
 # Note: This program optionally expects an expected file AND        #
 #   an input file, or just an expected file.  It will not work      #
 #   with only an input file.                                        #
+#                                                                   #
 # Note: This script benefits greatly from GenerateReport.java       #
 #   (another of my scripts) by summarizing the six (!) output files #
 #   from compilation and whatnot.                                   #
 #                                                                   #
-# Planned Update: Name output files based on file being compiled.   #
+# Note: This script will run slow at first launch, especially if    #
+#   you haven't already run javac in the current session.  That's   #
+#   just how java is, as we're all well aware by this point.        #
 #                                                                   #
 #####################################################################
 
@@ -74,7 +79,7 @@
 #  -- RenameScript.java                                             #
 #  -- GenerateReport.java                                           #
 #  -- Assignment Directory                                          #
-#      -- Student 1 Directory                                       #
+#      -- Student 1 Directory (UnityID if FirstLastToUnity is used) #
 #          -- JavaProgram.java                                      #
 #          -- JavaProgram.class                                     #
 #          -- output_compile.txt                                    #
@@ -84,7 +89,7 @@
 #          -- output_style.txt                                      #
 #          -- output_style_error.txt                                #
 #          -- Report.txt                                            #
-#      -- Student 2 Directory                                       #
+#      -- Student 2 Directory (UnityID if FirstLastToUnity is used) #
 #      -- ...                                                       #
 #                                                                   #
 #####################################################################
@@ -105,10 +110,92 @@
 #              Fixed checking for Stylechecker                      #
 #   v1.2 - 16/11/10 - RenameScript is automatically run when needed #
 #   v1.3 - 16/11/17 - Integrated FirstLastToUnity usage.            #
+#   v1.3 - 16/11/17 - Added fast compilation mode, final arg y/n    #
+#                                                                   #
+#####################################################################
+
+#####################################################################
+#                                                                   #
+# Script runtime on three example directories...                    #
+#    ...normal mode: 27.24 seconds                                  #
+#    ...fast mode  : 11.60 seconds                                  #
 #                                                                   #
 #####################################################################
 
 #!/bin/bash/
+
+capFast() {
+
+    echo "Beginning fast compilation of $(pwd)"
+    
+    EXEC_FILENAME=${COMP_FILENAME%.java}
+    EXEC_FILENAME="$EXEC_FILENAME.class"
+
+    #Check if file supplied by user exists AND is readable.
+    if [ ! -f $COMP_FILENAME ]; then
+        echo "${bold}ERR:${normal} $COMP_FILENAME not found or could not be read."
+        return
+    fi
+    
+    if [ ! -f $EXEC_FILENAME ]; then
+        echo "${bold}ERR:${normal} $EXEC_FILENAME not found or could not be read."
+        return
+    fi
+
+    rm -f output_fast.txt
+    
+    #Compile the given file notice.
+    echo "NOTE: Compiling $COMP_FILENAME"
+    
+    #Compile the given file, output anything to these files.
+    javac $COMP_FILENAME > output_fast.txt 2>> output_fast.txt
+    
+    #Make sure we compiled and were able to output to files.
+    if [ ! -r "output_fast.txt" ]; then
+        echo "${bold}ERR:${normal} Could not create output file for compilation."
+        echo "Moving on to next submission."
+        return
+    fi
+    
+    #Check if there were compilation errors.
+    if [ $(stat -c%s output_compile_error.txt) -gt 0 ]; then
+        echo "${bold}ERR:${normal} Compilation errors detected.  Moving on to next submission."
+        return
+    fi
+    
+    if [ ! -r $EXEC_FILENAME ]; then
+        echo "Could not create class.  Moving to next submission."
+        return
+    fi
+
+    #Drop the .class from the filename, execute from that.
+    EXEC_FILENAME=${COMP_FILENAME%.class}
+    echo "NOTE: Executing $EXEC_FILENAME"
+    
+    #Execute the program to the output files.
+    if [ "$HAVE_INPUT" = "true" ]; then
+        read -t 1 -n 10000 discard
+        java $EXEC_FILENAME <$INPUT_FILE > output_execute.txt 2>> output_fast.txt
+    else
+        java $EXEC_FILENAME > output_execute.txt 2>> output_fast.txt
+    fi
+    
+    #Do comparisons for errors during executions.
+    #I think this might only happen if you have errors during compilation.
+    if [ $(stat -c%s output_execute_error.txt) -gt 0 ]; then
+        echo "${bold}ERR:${normal} Execution errors detected.  Moving on to next submission."
+        return
+    fi
+    
+    if [ $HAVE_OUTPUT = "true" ]; then
+        echo "NOTE: Doing output comparison."
+        
+        #Using -y because that makes two columns for viewing - easier to read.
+        diff -y $EXPECTED_FILE output_execute.txt >> output_fast.txt
+        
+    fi
+	
+}
 
 compileAndExecuteAndStyle() {
 
@@ -263,15 +350,15 @@ normal=$(tput sgr0)
 if [ $# -lt 2 ]; then
     echo "${bold}ERR:${normal} Below minimum argument count."
     echo "Expected [something].java [folder of assignments]"
-    echo "Optional arguments following: [expected output] [inputFile]"
+    echo "Optional arguments following: [expected output] [inputFile] [y/n go fast]"
     echo "Exiting program with status 0."
     exit 0
 fi
 
-if [ $# -gt 4 ]; then
+if [ $# -gt 5 ]; then
     echo "${bold}ERR:${normal} Above maximum argument count."
     echo "Expected [something].java [folder of assignments]"
-    echo "Optional arguments following: [expected output] [inputFile]"
+    echo "Optional arguments following: [expected output] [inputFile] [y/n go fast]"
     echo "Exiting program with status 0."
     exit 0
 fi
@@ -292,7 +379,6 @@ if [ ! -d $2 ]; then
     echo "Exiting program with status 0."
     exit 0
 fi
-
 
 #Shamelessly stolen from stackoverflow, as per 90% of any production code is.
 directoryCount=`find $2/* -maxdepth 1 -type d | wc -l`
@@ -331,13 +417,30 @@ if [ $# -ge 3 ]; then
         #Because, for some reason, doing just $myDir/$4 doesn't work.
         EXPECTED_FILE=$myDir/$3
     fi
-    if [ $# == 4 ] && [ ! -r $4 ]; then
+    if [ $# -gte 5 ] && [ ! -r $4 ]; then
         echo "${bold}ERR:${normal} Input file does not exist."
         echo "Exiting program with status 0."
         exit 0
     else
         HAVE_INPUT=true
         INPUT_FILE=$myDir/$4
+    fi
+fi
+
+CAP_FAST="n"
+
+if [ $# -eq 5 ]; then
+    #Making sure argument 5 is y or n		  
+    #Trying to compress this to CAP_FAST=${$3,,} causes a bad substitution error.
+    #So we have to be a bit inefficient with it
+    CAP_FAST=$5		
+    CAP_FAST=${CAP_FAST,,}		
+              
+    #Check if the value, after lowercase conversion, is y or n.
+    if [ "$CAP_FAST" != "y" ] && [ "$CAP_FAST" != "n" ]; then
+        echo "${bold}ERR:${normal} Argument 3 is not y or n.  Will not take command."		
+        echo "Exiting program with status 0."		
+        exit 0		
     fi
 fi
 
@@ -355,11 +458,15 @@ for d in *; do
         if [ -r $COMP_FILENAME ]; then
             clear
             echo "NOTE: Current working directory: ${d}"
-            compileAndExecuteAndStyle "$COMP_FILENAME"
-            if [ -f $myDir/"GenerateReport.java" ]; then
-                echo "--------------------------------------------------------"
-                echo "NOTE: Generating Report based on output files."
-                java -classpath $myDir GenerateReport $myDir/$2/"${d}"  
+            if [ "$CAP_FAST" == "y" ]; then		
+                capFast "$COMP_FILENAME"
+            else
+                compileAndExecuteAndStyle "$COMP_FILENAME"
+                if [ -f $myDir/"GenerateReport.java" ]; then
+                    echo "--------------------------------------------------------"
+                    echo "NOTE: Generating Report based on output files."
+                    java -classpath $myDir GenerateReport $myDir/$2/"${d}"  
+                fi
             fi
 			sleep 1
         else
@@ -372,3 +479,4 @@ done
 cd $myDir
 
 exit 0 
+
