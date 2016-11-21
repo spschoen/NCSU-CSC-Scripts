@@ -390,15 +390,11 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-echo $EXPECTED_FILE
-echo $INPUT_FILE
-echo $CAP_FAST
-
-exit 0
-
 #Check if size of java file is 0
 if [ ${#COMP_FILENAME} == 0 ]; then
-    echo "test 1"
+    echo "${bold}ERR:${normal} Lacking Java File Argument."
+    echo "Exiting program with status 0."
+    exit 0
 else
     #Making sure Argument 1 is a java file.  Or has a java extension at least.
     if  [[ $COMP_FILENAME != *.java ]]; then
@@ -409,7 +405,9 @@ else
 fi
 
 if [ ${#DIRECTORY} == 0 ]; then
-    echo "test 2"
+    echo "${bold}ERR:${normal} Lacking Directory Argument."
+    echo "Exiting program with status 0."
+    exit 0
 else
     #Making sure argument 2 is a directory.
     if [ ! -d $DIRECTORY ]; then
@@ -470,8 +468,6 @@ if [ ${#EXPECTED_FILE} != 0 ]; then
         fi
     fi
 fi
-
-CAP_FAST="n"
 
 #Change directory to the directory of many folders.
 #Life has many directories edboy
