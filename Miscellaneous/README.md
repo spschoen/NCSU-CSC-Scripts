@@ -17,6 +17,13 @@ Index:
   * It's a shell of a program, that loops through directories in a directory argument.
   * Execution: sh directoryOrder.sh Directory/
 
+* easyTar.sh
+  * Written by Samuel Schoeneberger (spschoen@ncsu.edu)
+  * Bash
+  * Functional.
+  * It's Zip/Unzip, but tar.  Because, who doesn't want to use tar, but doesn't know how to use tar?
+  * Execution: sh easyTar.sh archive.tar/archive.gz directory-to-archive-or-unarchive-to/
+
 * methodPrinter.java
   * Written by Samuel Schoeneberger (spschoen@ncsu.edu)
   * Java
