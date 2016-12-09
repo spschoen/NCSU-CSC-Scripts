@@ -9,8 +9,8 @@
 # GenerateReports.java in the same directory, which generates       #
 # a Report.txt file for each submission                             #
 #                                                                   #
-# Required Arguments: .java file to compile                         #
-#                      directory of student programs.               #
+# Required Arguments: -p .java file to compile                      #
+#                     -d directory of student programs.             #
 #                                                                   #
 # Optional Arguments:  expected output file for comparison          #
 #                      input file for stdin                         #
@@ -28,7 +28,7 @@
 #                                                                   #
 # Note: This script benefits greatly from GenerateReport.java       #
 #   (another of my scripts) by summarizing the six (!) output files #
-#   from compilation and whatnot.                                   #
+#   from compilation, execution, and style checking.                #
 #                                                                   #
 # Note: This script will run slow at first launch, especially if    #
 #   you haven't already run javac in the current session.  That's   #
@@ -111,6 +111,8 @@
 #   v1.2 - 16/11/10 - RenameScript is automatically run when needed #
 #   v1.3 - 16/11/17 - Integrated FirstLastToUnity usage.            #
 #   v1.3 - 16/11/17 - Added fast compilation mode, final arg y/n    #
+#   v1.4 - 16/12/09 - Removed argument option, made execution       #
+#              optional.  Use -n or --no-execute.                   #
 #                                                                   #
 #####################################################################
 
@@ -167,25 +169,27 @@ capFast() {
         echo "Could not create class.  Moving to next submission."
         return
     fi
-
-    #Drop the .class from the filename, execute from that.
-    EXEC_FILENAME=${COMP_FILENAME%.class}
-    echo "NOTE: Executing $EXEC_FILENAME"
-    
-    #Execute the program to the output files.
-    if [ "$HAVE_INPUT" = "true" ]; then
-        read -t 1 -n 10000 discard
-        java $EXEC_FILENAME <$INPUT_FILE > output_execute.txt 2>> output_fast.txt
-    else
-        java $EXEC_FILENAME > output_execute.txt 2>> output_fast.txt
+    if [ "$NO_EXEC" = "n" ]; then
+        #Drop the .class from the filename, execute from that.
+        EXEC_FILENAME=${COMP_FILENAME%.class}
+        echo "NOTE: Executing $EXEC_FILENAME"
+        
+        #Execute the program to the output files.
+        if [ "$HAVE_INPUT" = "true" ]; then
+            read -t 1 -n 10000 discard
+            java $EXEC_FILENAME <$INPUT_FILE > output_execute.txt 2>> output_fast.txt
+        else
+            java $EXEC_FILENAME > output_execute.txt 2>> output_fast.txt
+        fi
+        
+        #Do comparisons for errors during executions.
+        #I think this might only happen if you have errors during compilation.
+        if [ $(stat -c%s output_execute_error.txt) -gt 0 ]; then
+            echo "${bold}ERR:${normal} Execution errors detected.  Moving on to next submission."
+            return
+        fi
     fi
     
-    #Do comparisons for errors during executions.
-    #I think this might only happen if you have errors during compilation.
-    if [ $(stat -c%s output_execute_error.txt) -gt 0 ]; then
-        echo "${bold}ERR:${normal} Execution errors detected.  Moving on to next submission."
-        return
-    fi
     
     if [ $HAVE_OUTPUT = "true" ]; then
         echo "NOTE: Doing output comparison."
@@ -216,6 +220,7 @@ compileAndExecuteAndStyle() {
     rm -f output_compile.txt output_compile_error.txt
     rm -f output_execute.txt output_execute_error.txt
     rm -f output_style.txt output_style_error.txt
+    rm -f diff.txt
     
     echo "--------------------------------------------------------"
     
@@ -252,31 +257,41 @@ compileAndExecuteAndStyle() {
     echo "NOTE: Compilation complete."
     echo "--------------------------------------------------------"
 
-    #Drop the .java from the filename, execute from that.
-    EXEC_FILENAME=${COMP_FILENAME%.java}
-    echo "NOTE: Attempting to execute $EXEC_FILENAME"
-    echo "NOTE: Output and errors will be printed to output_execute.txt and output_execute_error.txt"
-    
-    #Execute the program to the output files.
-    if [ "$HAVE_INPUT" = "true" ]; then
-        read -t 1 -n 10000 discard
-        java $EXEC_FILENAME <$INPUT_FILE > output_execute.txt 2> output_execute_error.txt
-    else
-        java $EXEC_FILENAME > output_execute.txt 2> output_execute_error.txt
+    #Literally only about GUIs.
+    if [ "$NO_EXEC" = "n" ]; then
+        #Drop the .java from the filename, execute from that.
+        EXEC_FILENAME=${COMP_FILENAME%.java}
+        echo "NOTE: Attempting to execute $EXEC_FILENAME"
+        echo "NOTE: Output and errors will be printed to output_execute.txt and output_execute_error.txt"
+        
+        #Execute the program to the output files.
+        if [ "$HAVE_INPUT" = "true" ]; then
+                read -t 1 -n 10000 discard
+            if [ ${#ARGUMENT} -eq 0 ]; then
+                java $EXEC_FILENAME <$INPUT_FILE > output_execute.txt 2> output_execute_error.txt
+            else
+                java $EXEC_FILENAME $EXEC_DIR/$ARGUMENT <$INPUT_FILE > output_execute.txt 2> output_execute_error.txt
+            fi
+        else
+            if [ ${#ARGUMENT} -eq 0 ]; then
+                java $EXEC_FILENAME > output_execute.txt 2> output_execute_error.txt
+            else
+                java $EXEC_FILENAME $EXEC_DIR/$ARGUMENT > output_execute.txt 2> output_execute_error.txt
+            fi
+        fi
+        
+        #Do comparisons for errors during executions.
+        #I think this might only happen if you have errors during compilation.
+        if [ $(stat -c%s output_execute_error.txt) -gt 0 ]; then
+            echo "${bold}ERR:${normal} Execution errors detected."
+            echo "NOTE: Continuing.  Errors may compound."
+        else
+            echo "NOTE: No execution errors detected."
+        fi
+        
+        echo "NOTE: Execution complete."
+        echo "--------------------------------------------------------"
     fi
-    
-    #Do comparisons for errors during executions.
-    #I think this might only happen if you have errors during compilation.
-    if [ $(stat -c%s output_execute_error.txt) -gt 0 ]; then
-        echo "${bold}ERR:${normal} Execution errors detected."
-        echo "NOTE: Continuing.  Errors may compound."
-    else
-        echo "NOTE: No execution errors detected."
-    fi
-    
-    echo "NOTE: Execution complete."
-    
-    echo "--------------------------------------------------------"
     
     if [ $HAVE_OUTPUT = "true" ]; then
         echo "NOTE: Doing output comparison."
@@ -284,11 +299,13 @@ compileAndExecuteAndStyle() {
         echo "Expected file                                 | User Output File"
         
         #Using -y because that makes two columns for viewing - easier to read.
-        diff $EXPECTED_FILE output_execute.txt
+        diff -y -W100 $EXPECTED_FILE output_execute.txt
         
-        read -n 1 -r -s -p "
-NOTE: Press any key to continue
-"
+        diff -y $EXPECTED_FILE output_execute.txt > diff.txt
+        
+        #read -n 1 -r -s -p "
+#NOTE: Press any key to continue
+#"
         
         echo "--------------------------------------------------------"
     fi
@@ -334,7 +351,7 @@ NOTE: Press any key to continue
 sleep 0.25
 
 #Saving wherever we started
-myDir=$(pwd)
+EXEC_DIR=$(pwd)
 
 #Don't forget to change directory to wherever we are.
 cd "$(dirname "$0")"
@@ -360,34 +377,41 @@ Application Options:
   -d, --dir                     REQUIRED: Directory of submissions to evaluate.
   -e, --expected                Expected output from Java program.
   -i, --input                   Input file for Java Programs.  Requires -e option as well.
+  -a, --argument                Possible argument to execute program with (max 1 argument)
   -q, --quick                   Informing the program to run fast.
   -f, --fast                    Same as -q option.
+  -n, --no-execute              Do not execute java files, just compile them.
 "
     exit 0
 fi
 
 CAP_FAST="n"
+NO_EXEC="n"
 
 while [ "$#" -gt 0 ]; do
-  case "$1" in
-    -p) COMP_FILENAME="$2"; shift 2;;
-    -d) DIRECTORY="$2"; shift 2;;
-    -e) EXPECTED_FILE="$2"; shift 2;;
-    -i) INPUT_FILE="$2"; shift 2;;
-    -q) CAP_FAST="y"; shift 1;;
-    -f) CAP_FAST="y"; shift 1;;
+    case "$1" in
+        -p) COMP_FILENAME="$2"; shift 2;;
+        -d) DIRECTORY="$2"; shift 2;;
+        -e) EXPECTED_FILE="$2"; shift 2;;
+        -i) INPUT_FILE="$2"; shift 2;;
+        -a) ARGUMENT="$2"; shift 2;;
+        -q) CAP_FAST="y"; shift 1;;
+        -f) CAP_FAST="y"; shift 1;;
+        -n) NO_EXEC="y"; shift 1;;
 
-    --program=*) COMP_FILENAME="${1#*=}"; shift 1;;
-    --dir=*) DIRECTORY="${1#*=}"; shift 1;;
-    --expected=*) EXPECTED_FILE="${1#*=}"; shift 1;;
-    --input=*) INPUT_FILE="${1#*=}"; shift 1;;
-    --quick=*) CAP_FAST="y"; shift 1;;
-    --fast=*) CAP_FAST="y"; shift 1;;
-    --program|--dir|--expected|--input) echo "$1 requires an argument" >&2; exit 1;;
+        --program=*) COMP_FILENAME="${1#*=}"; shift 1;;
+        --dir=*) DIRECTORY="${1#*=}"; shift 1;;
+        --expected=*) EXPECTED_FILE="${1#*=}"; shift 1;;
+        --input=*) INPUT_FILE="${1#*=}"; shift 1;;
+        --argument=*) ARGUMENT="${1#*=}"; shift 1;;
+        --quick=*) CAP_FAST="y"; shift 1;;
+        --fast=*) CAP_FAST="y"; shift 1;;
+        --no-execute=*) NO_EXEC="y"; shift 1;;
+        --program|--dir|--expected|--input) echo "$1 requires an argument" >&2; exit 1;;
 
-    -*) echo "unknown option: $1" >&2; exit 1;;
-    *) echo "unrecognized argument: $1"; exit 0
-  esac
+        -*) echo "unknown option: $1" >&2; exit 1;;
+        *) echo "unrecognized argument: $1"; exit 0
+    esac
 done
 
 #Check if size of java file is 0
@@ -447,7 +471,7 @@ HAVE_OUTPUT=false
 HAVE_INPUT=false
 
 if [ ${#EXPECTED_FILE} != 0 ]; then
-    EXPECTED_FILE=$myDir/$EXPECTED_FILE
+    EXPECTED_FILE=$EXEC_DIR/$EXPECTED_FILE
     if [ ! -r $EXPECTED_FILE ]; then
         echo "${bold}ERR:${normal} Expected output file does not exist."
         echo "Exiting program with status 0."
@@ -458,7 +482,7 @@ if [ ${#EXPECTED_FILE} != 0 ]; then
     
     #We can only have an input file if we have an output file.
     if [ ${#INPUT_FILE} != 0 ]; then
-        INPUT_FILE=$myDir/$INPUT_FILE
+        INPUT_FILE=$EXEC_DIR/$INPUT_FILE
         if [ ! -r $EXPECTED_FILE ]; then
             echo "${bold}ERR:${normal} Input file does not exist."
             echo "Exiting program with status 0."
@@ -487,10 +511,11 @@ for d in *; do
                 capFast "$COMP_FILENAME"
             else
                 compileAndExecuteAndStyle "$COMP_FILENAME"
-                if [ -f $myDir/"GenerateReport.java" ]; then
+                if [ -f $EXEC_DIR/"GenerateReport.java" ]; then
                     echo "--------------------------------------------------------"
                     echo "NOTE: Generating Report based on output files."
-                    java -classpath $myDir GenerateReport $myDir/$2/"${d}"  
+                    java -classpath $EXEC_DIR GenerateReport $EXEC_DIR/$DIRECTORY"${d}"
+                    echo $(pwd) >> "Report.txt"
                 fi
             fi
             sleep 1
@@ -501,6 +526,6 @@ for d in *; do
     fi
 done
 
-cd $myDir
+cd $EXEC_DIR
 
 exit 0
