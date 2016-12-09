@@ -10,13 +10,13 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <body>
     <h2>Style Guideline Errors</h2>
     <table border="1">
-        <tr>
+        <tr style="page-break-inside: avoid;">
             <th>Line</th>
             <th>Column</th>
             <th>Message</th>
         </tr>
         <xsl:for-each select="file/error">
-        <tr>
+        <tr style="page-break-inside: avoid;">
             <td><xsl:value-of select="@line"/></td>
             <td><xsl:value-of select="@column"/></td>
             <td><xsl:value-of select="@message"/></td>
