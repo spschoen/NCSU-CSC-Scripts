@@ -51,8 +51,6 @@
 
 #!/bin/bash/
 
-echo $(pwd)
-
 #Cleaning everything up.
 clear
 
