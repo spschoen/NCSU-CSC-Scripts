@@ -177,9 +177,13 @@ capFast() {
         #Execute the program to the output files.
         if [ "$HAVE_INPUT" = "true" ]; then
             read -t 1 -n 10000 discard
-            java $EXEC_FILENAME <$INPUT_FILE > output_execute.txt 2>> output_fast.txt
+            timeout $TIME_LIMIT java $EXEC_FILENAME <$INPUT_FILE > output_execute.txt 2>> output_fast.txt
         else
-            java $EXEC_FILENAME > output_execute.txt 2>> output_fast.txt
+            timeout $TIME_LIMIT java $EXEC_FILENAME > output_execute.txt 2>> output_fast.txt
+        fi
+        
+        if [ $? -eq 124 ]; then
+            echo "Error: Timeout Occured.  Infinite Loop/Break detected." >> output_execute_error.txt
         fi
         
         #Do comparisons for errors during executions.
@@ -268,16 +272,20 @@ compileAndExecuteAndStyle() {
         if [ "$HAVE_INPUT" = "true" ]; then
                 read -t 1 -n 10000 discard
             if [ ${#ARGUMENT} -eq 0 ]; then
-                java $EXEC_FILENAME <$INPUT_FILE > output_execute.txt 2> output_execute_error.txt
+                timeout $TIME_LIMIT java $EXEC_FILENAME <$INPUT_FILE > output_execute.txt 2> output_execute_error.txt
             else
-                java $EXEC_FILENAME $EXEC_DIR/$ARGUMENT <$INPUT_FILE > output_execute.txt 2> output_execute_error.txt
+                timeout $TIME_LIMIT java $EXEC_FILENAME "$EXEC_DIR"/$ARGUMENT <$INPUT_FILE > output_execute.txt 2> output_execute_error.txt
             fi
         else
             if [ ${#ARGUMENT} -eq 0 ]; then
-                java $EXEC_FILENAME > output_execute.txt 2> output_execute_error.txt
+                timeout $TIME_LIMIT java $EXEC_FILENAME > output_execute.txt 2> output_execute_error.txt
             else
-                java $EXEC_FILENAME $EXEC_DIR/$ARGUMENT > output_execute.txt 2> output_execute_error.txt
+                timeout $TIME_LIMIT java $EXEC_FILENAME "$EXEC_DIR"/$ARGUMENT > output_execute.txt 2> output_execute_error.txt
             fi
+        fi
+        
+        if [ $? -eq 124 ]; then
+            echo "Error: Timeout Occured.  Infinite Loop/Break detected." >> output_execute_error.txt
         fi
         
         #Do comparisons for errors during executions.
@@ -347,10 +355,11 @@ compileAndExecuteAndStyle() {
 #                                                                   #
 #####################################################################
 
-#Quick sleep just because.
+#Sleep for a quick pause.
 sleep 0.25
 
 #Saving wherever we started
+#Needed because half this script works on relative position of everything.
 EXEC_DIR=$(pwd)
 
 #Don't forget to change directory to wherever we are.
@@ -365,7 +374,7 @@ if [ $# -eq 0 ]; then
     exit 0
 fi
 
-if [ $1 == "-h" ] || [ $1 == "--help" ] || [ $1 == "--h" ]; then
+if [ $1 == "-h" ] || [ $1 == "--help" ] || [ $1 == "--h" ] || [ $1 == "-help" ]; then
     echo "Usage:
 sh CompileAndExecuteScript.sh [OPTION...]
 
@@ -378,15 +387,20 @@ Application Options:
   -e, --expected                Expected output from Java program.
   -i, --input                   Input file for Java Programs.  Requires -e option as well.
   -a, --argument                Possible argument to execute program with (max 1 argument)
-  -q, --quick                   Informing the program to run fast.
-  -f, --fast                    Same as -q option.
+  -f, --fast                    Informing the program to run fast - less output and work done.
+  -q, --quick                   Same as -f option.
   -n, --no-execute              Do not execute java files, just compile them.
+  -t, --time-limit              Time limit for programs to execute for.
 "
     exit 0
 fi
 
 CAP_FAST="n"
 NO_EXEC="n"
+
+#Since this should never be anything but an integer, let's just declare it.
+#""""types"""" in bash.
+declare -i TIME_LIMIT=30
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -395,6 +409,7 @@ while [ "$#" -gt 0 ]; do
         -e) EXPECTED_FILE="$2"; shift 2;;
         -i) INPUT_FILE="$2"; shift 2;;
         -a) ARGUMENT="$2"; shift 2;;
+        -t) TIME_LIMIT="$2"; shift 2;;
         -q) CAP_FAST="y"; shift 1;;
         -f) CAP_FAST="y"; shift 1;;
         -n) NO_EXEC="y"; shift 1;;
@@ -404,6 +419,7 @@ while [ "$#" -gt 0 ]; do
         --expected=*) EXPECTED_FILE="${1#*=}"; shift 1;;
         --input=*) INPUT_FILE="${1#*=}"; shift 1;;
         --argument=*) ARGUMENT="${1#*=}"; shift 1;;
+        --time-limit=*) TIME_LIMIT="${1#*=}"; shift 1;;
         --quick=*) CAP_FAST="y"; shift 1;;
         --fast=*) CAP_FAST="y"; shift 1;;
         --no-execute=*) NO_EXEC="y"; shift 1;;
@@ -444,6 +460,12 @@ fi
 #Cleaning everything up.
 clear
 
+if [ "$TIME_LIMIT" -le "0" ]; then
+    echo "${bold}ERR:${normal} Timeout limit provided 0, less than 0, or non-integer."
+    echo "Setting Timeout limit to default 30."
+    TIME_LIMIT=30
+fi
+
 #Shamelessly stolen from stackoverflow, as per 90% of any production code is.
 directoryCount=`find $DIRECTORY/* -maxdepth 1 -type d | wc -l`
 
@@ -455,7 +477,10 @@ if [ $directoryCount -eq 0 ]; then
         exit 0
     else
         #Note to futuer self - make it detected whether to run javac or java only.
-        javac RenameScript.java; java RenameScript $DIRECTORY
+        if [ ! -f "RenameScript.class" ]; then
+            javac RenameScript.java
+        fi
+        java RenameScript $DIRECTORY
     fi
 else
     echo "NOTE: Subdirectories detected in $DIRECTORY, RenameScript will not be executed."
@@ -463,7 +488,10 @@ fi
 
 if [ -r "FirstLastToUnity.java" ] && [ -r "mapping.txt" ]; then
     echo "Running UnityID Mapper."
-    javac FirstLastToUnity.java; java FirstLastToUnity $DIRECTORY
+    if [ ! -f "FirstLastToUnity.class" ]; then
+        javac FirstLastToUnity.java
+    fi
+    java FirstLastToUnity $DIRECTORY
     sleep 1
 fi
 
@@ -471,7 +499,7 @@ HAVE_OUTPUT=false
 HAVE_INPUT=false
 
 if [ ${#EXPECTED_FILE} != 0 ]; then
-    EXPECTED_FILE=$EXEC_DIR/$EXPECTED_FILE
+    EXPECTED_FILE="$EXEC_DIR"/$EXPECTED_FILE
     if [ ! -r $EXPECTED_FILE ]; then
         echo "${bold}ERR:${normal} Expected output file does not exist."
         echo "Exiting program with status 0."
@@ -482,7 +510,7 @@ if [ ${#EXPECTED_FILE} != 0 ]; then
     
     #We can only have an input file if we have an output file.
     if [ ${#INPUT_FILE} != 0 ]; then
-        INPUT_FILE=$EXEC_DIR/$INPUT_FILE
+        INPUT_FILE="$EXEC_DIR"/$INPUT_FILE
         if [ ! -r $EXPECTED_FILE ]; then
             echo "${bold}ERR:${normal} Input file does not exist."
             echo "Exiting program with status 0."
@@ -511,10 +539,10 @@ for d in *; do
                 capFast "$COMP_FILENAME"
             else
                 compileAndExecuteAndStyle "$COMP_FILENAME"
-                if [ -f $EXEC_DIR/"GenerateReport.java" ]; then
+                if [ -f "$EXEC_DIR"/"GenerateReport.java" ]; then
                     echo "--------------------------------------------------------"
                     echo "NOTE: Generating Report based on output files."
-                    java -classpath $EXEC_DIR GenerateReport $EXEC_DIR/$DIRECTORY"${d}"
+                    java -classpath "$EXEC_DIR" GenerateReport "$EXEC_DIR"/$DIRECTORY"${d}"
                     echo $(pwd) >> "Report.txt"
                 fi
             fi
@@ -526,6 +554,6 @@ for d in *; do
     fi
 done
 
-cd $EXEC_DIR
+cd "$EXEC_DIR"
 
 exit 0
