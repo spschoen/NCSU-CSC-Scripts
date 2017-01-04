@@ -113,6 +113,8 @@
 #   v1.3 - 16/11/17 - Added fast compilation mode, final arg y/n    #
 #   v1.4 - 16/12/09 - Removed argument option, made execution       #
 #              optional.  Use -n or --no-execute.                   #
+#   v1.5 - 17/01/03 - Fixed execution so infinite loops are handled #
+#                       and added argument option for timeout.      #
 #                                                                   #
 #####################################################################
 
@@ -400,7 +402,7 @@ NO_EXEC="n"
 
 #Since this should never be anything but an integer, let's just declare it.
 #""""types"""" in bash.
-declare -i TIME_LIMIT=30
+declare -i TIME_LIMIT=15
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -457,14 +459,15 @@ else
     fi
 fi
 
-#Cleaning everything up.
-clear
-
 if [ "$TIME_LIMIT" -le "0" ]; then
     echo "${bold}ERR:${normal} Timeout limit provided 0, less than 0, or non-integer."
-    echo "Setting Timeout limit to default 30."
-    TIME_LIMIT=30
+    echo "Setting Timeout limit to default 15."
+    TIME_LIMIT=15
+    sleep 1
 fi
+
+#Cleaning everything up.
+clear
 
 #Shamelessly stolen from stackoverflow, as per 90% of any production code is.
 directoryCount=`find $DIRECTORY/* -maxdepth 1 -type d | wc -l`
