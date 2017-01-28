@@ -569,7 +569,7 @@ for d in *; do
                 capFast "$COMP_FILENAME"
             else
                 compileAndExecuteAndStyle "$COMP_FILENAME"
-                if [ -f "$EXEC_DIR"/"GenerateReport.java" ]; then
+                if [ -f "$EXEC_DIR"/"GenerateReport.class" ]; then
                     echo "--------------------------------------------------------"
                     echo "NOTE: Generating Report based on output files."
                     java -classpath "$EXEC_DIR" GenerateReport "$EXEC_DIR"/$DIRECTORY"${d}"
