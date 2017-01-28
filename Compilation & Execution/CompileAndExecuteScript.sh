@@ -524,6 +524,10 @@ if [ ${#EXPECTED_FILE} != 0 ]; then
     fi
 fi
 
+if [ -f "$EXEC_DIR"/"GenerateReport.java" ]; then
+    javac GenerateReport.java
+fi
+
 #Change directory to the directory of many folders.
 #Life has many directories edboy
 #Note to future self: this has to be last, because of file checks.
