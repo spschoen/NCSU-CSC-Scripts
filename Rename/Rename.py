@@ -3,6 +3,10 @@ import os
 import sys
 import csv
 
+SUBMISSION_DIRECTORY = "C:\Users\Adminuser\Documents\CSC116\P2\CSC 116 (007) Spring 2017-Project 1 Submit (stage-1)-433410\\"
+
+PDF_DIRECTORY = "C:\\Users\\Adminuser\\Documents\\CSC116\\P2\\FeedbackFiles\\"
+
 def open_file(mapFile):
   mappings = dict()
 
@@ -19,28 +23,79 @@ def get_student_name(fileName):
   return name
 
 def main(argv):
-  mappings = open_file("studentMapping.csv");
 
-  DIRECTORY = "C:\Users\Adminuser\Google Drive\Current\CSC116 - Fall 2016\Submissions\CSC 116 Fall 2016-Project 1 Submit--163169"
-  onlyfiles = os.listdir(DIRECTORY)
+  rename_to_moodle_structure()
 
+  #rename_to_classic_structure()
+
+def rename_to_moodle_structure():
+  submitFiles = os.listdir(SUBMISSION_DIRECTORY)
+  mappings = open_file("007-studentMapping.csv");
+  
+  for f in submitFiles:
+    print f
+    prefix = f[:f.find("assignsubmission"):]
+    numberSuffix = f[f.find("_")+1:f.rfind("_")-1:]
+    participantID = numberSuffix[:numberSuffix.find("_"):]
+    studentName = f[:f.find("_"):]
+    print prefix
+    print studentName
+    print participantID
+
+    for key, value in mappings.iteritems():
+      first = value[:value.find(" ")]
+      last = value[value.find(" ")+1::]
+
+      if first in studentName and last in studentName:
+        print 'MATCH: ' + first + ' ' + last + ' in ' + studentName
+
+       # pdfFiles = os.listdir(PDF_DIRECTORY)
+
+        for root, dirs, files in os.walk(PDF_DIRECTORY):
+          if 'single' not in root:
+            for pdf in files:
+              if key in pdf:
+                print '\t\t ' + pdf + ' ends with PDF'
+
+        #for pdf in pdfFiles:
+                print '\t\t matched key to pdf'
+                print '\t\t renaming ' + pdf + ' to ' + prefix + pdf
+
+                outputPDFs = root[:root.rfind('\\'):] + '\\single\\'
+                print outputPDFs + prefix + pdf
+                if not os.path.exists(outputPDFs):
+                  os.makedirs(outputPDFs)
+                os.rename(os.path.join(root, pdf), outputPDFs + os.sep + prefix + 'assignsubmission_file_' + pdf)
+
+
+def rename_to_classic_structure():
+  onlyfiles = os.listdir(SUBMISSION_DIRECTORY)
+  mappings = open_file("007-studentMapping.csv");
+       
   for f in onlyfiles:
     if f.endswith(".java"):
+    #if not f.endswith(".py") and  not f.endswith(".csv"):
       print f
       project_file_name = f[f.rfind("_")+1::]
       print '\t' + project_file_name
-      name_in_file = get_student_name(f);
+      name_in_file = get_student_name(f).lower();
+
+      print name_in_file
 
       for key, value in mappings.iteritems():
         first = value[:value.find(" ")]
         last = value[value.find(" ")+1::]
 
-        if first in name_in_file and last in name_in_file:
+        if first.lower() in name_in_file and last.lower() in name_in_file:
           print '\t\t' + value + ' IN ' + name_in_file
           if not os.path.exists(key):
+            print '\t\tmaking directory ' + key
             os.makedirs(key)
-          print '\t\t\tMoving ' + project_file_name + ' for ' + key            
-          os.rename(f, key + "/" + project_file_name)
+          print '\t\tMoving ' + project_file_name + ' for ' + key
+          if os.path.isfile(key + "/" + project_file_name): 
+              os.rename(f, key + "/" + project_file_name + "2")
+          else:
+              os.rename(f, key + "/" + project_file_name)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -5,8 +5,14 @@ Index:
 * Rename.py
   * Written by Dr. Jason King (jtking@ncsu.edu)
   * Python
-  * Creates a folder for each student's submission, and names it their UnityID.
-  * Dr. King, please fill this out greater if you feel the need.
+  * Converts from Moodle format to Wolfware Classic, OR converts from Wolfware Classic to Moodle format
+  * Convert from Wolfware Classic to Moodle format:
+     * Download .zip of all Moodle submissions (not in individual directories) 
+	 * Unzip it
+	 * Edit Rename.py to update the path to the unzipped file contents
+	 * Edit Rename.py to update the path to the Feedback Files (which are in Wolfware Classic format)
+	 * Create your mapping file (CSV file with: unityID, lastName, firstName)
+	 * Run the script.
   * Execution:
     * python Rename.py
 * RenameScript.java

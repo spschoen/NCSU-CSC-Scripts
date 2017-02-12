@@ -524,10 +524,37 @@ if [ ${#EXPECTED_FILE} != 0 ]; then
     fi
 fi
 
+if [ -f "$EXEC_DIR"/"GenerateReport.java" ]; then
+    javac GenerateReport.java
+fi
+
 #Change directory to the directory of many folders.
 #Life has many directories edboy
 #Note to future self: this has to be last, because of file checks.
 cd $DIRECTORY
+
+FILE_COUNT="$(ls -1 $EXEC_DIR/$DIRECTORY | wc -l)"
+
+#echo $FILE_COUNT
+
+if [ $FILE_COUNT -eq "1" ]; then
+    echo "Pretty sure that's an archive in there boss."
+    for file in "$EXEC_DIR"/"$DIRECTORY"/*; do
+        mv "$file" "${file// /_}" #convert all spaces to underscores, because /bruh/
+        #echo $file
+        file=${file##*/} #remove the path from the file.
+        #echo $file
+        if [[ "$file" == *.zip ]]; then
+            unzip "$file" -d ./
+            mkdir -v "$EXEC_DIR/Archives/"
+            mv -v "$file" "$EXEC_DIR/Archives/""$file"
+            break
+        fi
+    done
+fi
+
+sleep 1
+clear
 
 #The working loop.  Loops through each directory in the supplied directory,
 #And runs the compilation function on it, with the filename argument.
@@ -542,7 +569,7 @@ for d in *; do
                 capFast "$COMP_FILENAME"
             else
                 compileAndExecuteAndStyle "$COMP_FILENAME"
-                if [ -f "$EXEC_DIR"/"GenerateReport.java" ]; then
+                if [ -f "$EXEC_DIR"/"GenerateReport.class" ]; then
                     echo "--------------------------------------------------------"
                     echo "NOTE: Generating Report based on output files."
                     java -classpath "$EXEC_DIR" GenerateReport "$EXEC_DIR"/$DIRECTORY"${d}"

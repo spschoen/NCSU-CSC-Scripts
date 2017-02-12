@@ -12,14 +12,14 @@
 clear
 
 #Saving wherever we started
-myDir=$(pwd)
+EXEC_DIR=$(pwd)
 
 #Don't forget to change directory to wherever we are.
 cd "$(dirname "$0")"
 
 #Check if user supplied arguments
 if [ $# -ne 1 ]; then
-    echo "ERR: Not given expected arguments.."
+    echo "ERR: Number of given arguments incorrect."
     echo "Expected [directory of directories to distribute file to]"
     echo "Exiting program with status 0."
     exit 0
@@ -36,15 +36,17 @@ DIRECTORY="$1"
 cd $DIRECTORY
 
 for d in *; do
-    cd "${d}"
-    #COMMANDS GO HERE
+    if [ -d "${d}" ]; then
+        cd "${d}"
+        #COMMANDS GO HERE
     
-    echo $(pwd)
-    
-    #COMMANDS STOP HERE
+        echo $(pwd)
+        
+        #COMMANDS STOP HERE
+        cd ..
+    fi
     read -n 1 -r -s -p "
 NOTE: Press any key to continue
 "
-    cd ..
     clear
 done
