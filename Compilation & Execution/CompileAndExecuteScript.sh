@@ -524,10 +524,6 @@ if [ ${#EXPECTED_FILE} != 0 ]; then
     fi
 fi
 
-if [ -f "$EXEC_DIR"/"GenerateReport.java" ]; then
-    javac GenerateReport.java
-fi
-
 #Change directory to the directory of many folders.
 #Life has many directories edboy
 #Note to future self: this has to be last, because of file checks.
@@ -563,16 +559,16 @@ for d in *; do
     if [ -d "${d}" ]; then
         cd "${d}"
         if [ -r $COMP_FILENAME ]; then
-            clear
+            #clear
             echo "NOTE: Current working directory: ${d}"
             if [ "$CAP_FAST" == "y" ]; then        
                 capFast "$COMP_FILENAME"
             else
-                compileAndExecuteAndStyle "$COMP_FILENAME"
-                if [ -f "$EXEC_DIR"/"GenerateReport.class" ]; then
+                compileAndExecuteAndStyle
+                if [ -f "$EXEC_DIR"/"ReportGenerator.sh" ]; then
                     echo "--------------------------------------------------------"
                     echo "NOTE: Generating Report based on output files."
-                    java -classpath "$EXEC_DIR" GenerateReport "$EXEC_DIR"/$DIRECTORY"${d}"
+                    bash "$EXEC_DIR"/"ReportGenerator.sh" ./
                     echo $(pwd) >> "Report.txt"
                 fi
             fi

@@ -1,5 +1,10 @@
-#Cleaning everything up.
-clear
+#####################################################################
+#                                                                   #
+# TODO: Documentation                                               #
+#                                                                   #
+#####################################################################
+
+#!/bin/bash
 
 #Saving wherever we started
 EXEC_DIR=$(pwd)
@@ -70,7 +75,6 @@ for d in *; do
                 for line in `cat $FILE_NAME`; do
                     if [[ "$line" == *$DIR* ]]; then
                         line=${line##*/}
-                        #echo $line
                         
                         if [[ "$line" == *"tab"* ]];                    then let "TabLines += 1"
                         elif [[ "$line" == *"indentation"* ]];          then let "IncInden += 1"
