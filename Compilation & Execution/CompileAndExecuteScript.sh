@@ -12,11 +12,13 @@
 # Required Arguments: -p .java file to compile                      #
 #                     -d directory of student programs.             #
 #                                                                   #
-# Optional Arguments:  expected output file for comparison          #
-#                      input file for stdin                         #
-#                      y or n (or nothing) for fast script          #
+# Optional Arguments: -e expected output file for comparison        #
+#                     -i input file for stdin                       #
+#                     -f/-q for fast script w/ less information     #
+#                     -n to not execute file, just compile.         #
+#                     -t to set custom timeout limit.               #
 #                                                                   #
-# Use: sh CompileAndExecuteScript file.java dir/ [optional args]    #
+# Use: sh CompileAndExecuteScript -p file.java -d dir/ [optionals]  #
 #                                                                   #
 # Note: This script assumes you have Zach Butler &                  #
 #   Dr. Jessica Schmidt's RenameScript program in the               #
@@ -26,7 +28,7 @@
 #   an input file, or just an expected file.  It will not work      #
 #   with only an input file.                                        #
 #                                                                   #
-# Note: This script benefits greatly from GenerateReport.java       #
+# Note: This script benefits greatly from GenerateReport.sh         #
 #   (another of my scripts) by summarizing the six (!) output files #
 #   from compilation, execution, and style checking.                #
 #                                                                   #
@@ -115,6 +117,7 @@
 #              optional.  Use -n or --no-execute.                   #
 #   v1.5 - 17/01/03 - Fixed execution so infinite loops are handled #
 #                       and added argument option for timeout.      #
+#   v1.6 - 17/03/25 - Documentation, log files, some extra goodies. #
 #                                                                   #
 #####################################################################
 
@@ -128,227 +131,221 @@
 
 #!/bin/bash/
 
-capFast() {
+# I'm calling this the 'global' area.
+# Variables that get used later, functions used, etc.
 
-    echo "Beginning fast compilation of $(pwd)"
-    
-    EXEC_FILENAME=${COMP_FILENAME%.java}
-    EXEC_FILENAME="$EXEC_FILENAME.class"
+FAST_FILE="output_fast.txt"
 
-    #Check if file supplied by user exists AND is readable.
-    if [ ! -f $COMP_FILENAME ]; then
-        echo "${bold}ERR:${normal} $COMP_FILENAME not found or could not be read."
-        return
-    fi
-    
-    if [ ! -f $EXEC_FILENAME ]; then
-        echo "${bold}ERR:${normal} $EXEC_FILENAME not found or could not be read."
-        return
-    fi
+COMPILE_FILE="output_compile.txt"
+COMPILE_ERROR_FILE="output_compile_error.txt"
 
-    rm -f output_fast.txt
-    
-    #Compile the given file notice.
-    echo "NOTE: Compiling $COMP_FILENAME"
-    
-    #Compile the given file, output anything to these files.
-    javac $COMP_FILENAME > output_fast.txt 2>> output_fast.txt
-    
-    #Make sure we compiled and were able to output to files.
-    if [ ! -r "output_fast.txt" ]; then
-        echo "${bold}ERR:${normal} Could not create output file for compilation."
-        echo "Moving on to next submission."
-        return
-    fi
-    
-    #Check if there were compilation errors.
-    if [ $(stat -c%s output_compile_error.txt) -gt 0 ]; then
-        echo "${bold}ERR:${normal} Compilation errors detected.  Moving on to next submission."
-        return
-    fi
-    
-    if [ ! -r $EXEC_FILENAME ]; then
-        echo "Could not create class.  Moving to next submission."
-        return
-    fi
-    if [ "$NO_EXEC" = "n" ]; then
-        #Drop the .class from the filename, execute from that.
-        EXEC_FILENAME=${COMP_FILENAME%.class}
-        echo "NOTE: Executing $EXEC_FILENAME"
-        
-        #Execute the program to the output files.
-        if [ "$HAVE_INPUT" = "true" ]; then
-            read -t 1 -n 10000 discard
-            timeout $TIME_LIMIT java $EXEC_FILENAME <$INPUT_FILE > output_execute.txt 2>> output_fast.txt
-        else
-            timeout $TIME_LIMIT java $EXEC_FILENAME > output_execute.txt 2>> output_fast.txt
-        fi
-        
-        if [ $? -eq 124 ]; then
-            echo "Error: Timeout Occured.  Infinite Loop/Break detected." >> output_execute_error.txt
-        fi
-        
-        #Do comparisons for errors during executions.
-        #I think this might only happen if you have errors during compilation.
-        if [ $(stat -c%s output_execute_error.txt) -gt 0 ]; then
-            echo "${bold}ERR:${normal} Execution errors detected.  Moving on to next submission."
-            return
-        fi
-    fi
-    
-    
-    if [ $HAVE_OUTPUT = "true" ]; then
-        echo "NOTE: Doing output comparison."
-        
-        #Using -y because that makes two columns for viewing - easier to read.
-        diff -y $EXPECTED_FILE output_execute.txt >> output_fast.txt
-        
-    fi
-    
-}
+EXECUTE_FILE="output_execute.txt"
+EXECUTE_ERROR_FILE="output_execute_error.txt"
+
+STYLE_FILE="output_style.txt"
+STYLE_ERROR_FILE="output_style_error.txt"
+
+readonly LOG_FILE="$(pwd)/$(basename "$0")_$(date +%s).log"
+info()    { echo "[INFO]    $@" | tee -a "$LOG_FILE" >&2 ; }
+warning() { echo "[WARNING] $@" | tee -a "$LOG_FILE" >&2 ; }
+error()   { echo "[ERROR]   $@" | tee -a "$LOG_FILE" >&2 ; }
+fatal()   { echo "[FATAL]   $@" | tee -a "$LOG_FILE" >&2 ; exit 1 ; }
 
 compileAndExecuteAndStyle() {
+
+	# if [ "$CAP_FAST" == "y" ]; then
+    # 
+	# else
+    # 
+	# fi
+
+	if [ "$CAP_FAST" == "y" ]; then
+		if [ ! -f $COMP_FILENAME ]; then
+			error "$COMP_FILENAME not found or could not be read."
+			return
+		fi
+
+		if [ ! -f $EXEC_FILENAME ]; then
+			error "$EXEC_FILENAME not found or could not be read."
+			return
+		fi
+	fi
 
     #Check if file supplied by user exists AND is readable.
     #Note: change -r to -f if you only care that the file exists.
     #But reading is probably important.
     #Does -r imply -f?
     if [ ! -r $COMP_FILENAME ]; then
-        echo "${bold}ERR:${normal} $COMP_FILENAME not found or could not be read."
-        echo ${PWD##*/}
+        error "$COMP_FILENAME not found or could not be read."
+        error "${PWD##*/}"
         return
     fi
 
     #Yeah I'm not super happy with deleting files in the script
     #But it's probably the best thing to do.
     #I'm explicitly writing them out because I don't want to take chances.
-    echo "NOTE: Deleting old output files if they exist."
-    rm -f output_compile.txt output_compile_error.txt
-    rm -f output_execute.txt output_execute_error.txt
-    rm -f output_style.txt output_style_error.txt
-    rm -f diff.txt
-    
-    echo "--------------------------------------------------------"
-    
+    info "Deleting old output files if they exist."
+	if [ "$CAP_FAST" == "y" ]; then
+		rm -f $FAST_FILE
+	else
+		rm -f $COMPILE_FILE $COMPILE_ERROR_FILE
+		rm -f $EXECUTE_FILE $EXECUTE_ERROR_FILE
+		rm -f $STYLE_FILE $STYLE_ERROR_FILE
+		rm -f diff.txt
+	fi
+
+    info "--------------------------------------------------"
+
     #Compile the given file notice.
-    echo "NOTE: Attempting to compile $COMP_FILENAME"
-    echo "NOTE: Output and errors will be printed to output_compile.txt and output_compile_error.txt"
-    
+    info "Attempting to compile $COMP_FILENAME"
+    info "Output and errors will be printed to $COMPILE_FILE and $COMPILE_ERROR_FILE"
+
     #Compile the given file, output anything to these files.
-    javac $COMP_FILENAME > output_compile.txt 2> output_compile_error.txt
-    
-    COMP_OUTPUT="output_compile.txt"
-    COMP_OUTPUT_ERROR="output_compile_error.txt"
-    
+
+	if [ "$CAP_FAST" == "y" ]; then
+		javac $COMP_FILENAME > $FAST_FILE 2>> $FAST_FILE
+	else
+		javac $COMP_FILENAME > $COMPILE_FILE 2> $COMPILE_ERROR_FILE
+	fi
+
     #Make sure we compiled and were able to output to files.
-    if [ ! -r $COMP_OUTPUT ]; then
-        echo "${bold}ERR:${normal} Could not create output file for compilation."
-        echo "Exiting program with status 2"
+    if [ ! -r $COMPILE_FILE ]; then
+        error "Could not create output file for compilation."
+        error "Exiting program with status 2"
         exit 2
     fi
-    
-    if [ ! -r $COMP_OUTPUT_ERROR ]; then
-        echo "${bold}ERR:${normal} Could not create output file for compilation error."
-        echo "Exiting program with status 2"
+
+    if [ ! -r $COMPILE_ERROR_FILE ]; then
+        error "Could not create output file for compilation error."
+        error "Exiting program with status 2"
         exit 2
     fi
-    
+
     #Check if there were compilation errors.
-    if [ $(stat -c%s output_compile_error.txt) -gt 0 ]; then
-        echo "${bold}ERR:${normal} Compilation errors detected.  Errors may compound."
+    if [ $(stat -c%s $COMPILE_ERROR_FILE) -gt 0 ]; then
+        error "Compilation errors detected.  Errors may compound."
     else
-        echo "NOTE: No compilation errors detected."
+        info "No compilation errors detected."
     fi
-    
-    echo "NOTE: Compilation complete."
-    echo "--------------------------------------------------------"
+
+    info "Compilation complete."
+    info "--------------------------------------------------"
 
     #Literally only about GUIs.
     if [ "$NO_EXEC" = "n" ]; then
+
+		# Replace .java with .class.
+		EXEC_FILENAME="${COMP_FILENAME%.java}.class"
+
+		if [ ! -r $EXEC_FILENAME ]; then
+			warning "Class not found, or readable.  Skipping execution."
+			return
+		fi
+
         #Drop the .java from the filename, execute from that.
-        EXEC_FILENAME=${COMP_FILENAME%.java}
-        echo "NOTE: Attempting to execute $EXEC_FILENAME"
-        echo "NOTE: Output and errors will be printed to output_execute.txt and output_execute_error.txt"
-        
-        #Execute the program to the output files.
+        info "Attempting to execute $EXEC_FILENAME"
+        info "Output and errors will be printed to $EXECUTE_FILE and $EXECUTE_ERROR_FILE"
+
+		#Execute the program to the output files.
         if [ "$HAVE_INPUT" = "true" ]; then
-                read -t 1 -n 10000 discard
+			read -t 1 -n 10000 discard
             if [ ${#ARGUMENT} -eq 0 ]; then
-                timeout $TIME_LIMIT java $EXEC_FILENAME <$INPUT_FILE > output_execute.txt 2> output_execute_error.txt
+				if [ "$CAP_FAST" == "y" ]; then
+					timeout $TIME_LIMIT java $EXEC_FILENAME <$INPUT_FILE > $FAST_FILE 2>> $FAST_FILE
+				else
+					timeout $TIME_LIMIT java $EXEC_FILENAME <$INPUT_FILE > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
+				fi
             else
-                timeout $TIME_LIMIT java $EXEC_FILENAME "$EXEC_DIR"/$ARGUMENT <$INPUT_FILE > output_execute.txt 2> output_execute_error.txt
+				if [ "$CAP_FAST" == "y" ]; then
+					timeout $TIME_LIMIT java $EXEC_FILENAME $ARGUMENT <$INPUT_FILE > $FAST_FILE 2>> $FAST_FILE
+				else
+					timeout $TIME_LIMIT java $EXEC_FILENAME $ARGUMENT <$INPUT_FILE > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
+				fi
             fi
         else
             if [ ${#ARGUMENT} -eq 0 ]; then
-                timeout $TIME_LIMIT java $EXEC_FILENAME > output_execute.txt 2> output_execute_error.txt
+				if [ "$CAP_FAST" == "y" ]; then
+					timeout $TIME_LIMIT java $EXEC_FILENAME > $FAST_FILE 2>> $FAST_FILE
+				else
+					timeout $TIME_LIMIT java $EXEC_FILENAME > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
+				fi
+
             else
-                timeout $TIME_LIMIT java $EXEC_FILENAME "$EXEC_DIR"/$ARGUMENT > output_execute.txt 2> output_execute_error.txt
+				if [ "$CAP_FAST" == "y" ]; then
+					timeout $TIME_LIMIT java $EXEC_FILENAME $ARGUMENT > $FAST_FILE 2>> $FAST_FILE
+				else
+					timeout $TIME_LIMIT java $EXEC_FILENAME $ARGUMENT > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
+				fi
+
             fi
         fi
-        
+
         if [ $? -eq 124 ]; then
-            echo "Error: Timeout Occured.  Infinite Loop/Break detected." >> output_execute_error.txt
+            error "Error: Timeout Occured.  Infinite Loop/Break detected." >> $EXECUTE_ERROR_FILE
         fi
-        
-        #Do comparisons for errors during executions.
+
+		#Do comparisons for errors during executions.
         #I think this might only happen if you have errors during compilation.
-        if [ $(stat -c%s output_execute_error.txt) -gt 0 ]; then
-            echo "${bold}ERR:${normal} Execution errors detected."
-            echo "NOTE: Continuing.  Errors may compound."
-        else
-            echo "NOTE: No execution errors detected."
-        fi
-        
-        echo "NOTE: Execution complete."
-        echo "--------------------------------------------------------"
+		if [ "$CAP_FAST" != "y" ] && [ $(stat -c%s $EXECUTE_ERROR_FILE) -gt 0 ]; then
+			error "Execution errors detected."
+            info "Continuing.  Errors may compound."
+		else
+			info "No execution errors detected."
+		fi
+
+        info "Execution complete."
+        info "--------------------------------------------------"
     fi
-    
+
     if [ $HAVE_OUTPUT = "true" ]; then
-        echo "NOTE: Doing output comparison."
-        echo "NOTE: Lack of pipe character indicates lines are equal."
-        echo "Expected file                                 | User Output File"
-        
-        #Using -y because that makes two columns for viewing - easier to read.
-        diff -y -W100 $EXPECTED_FILE output_execute.txt
-        
-        diff -y $EXPECTED_FILE output_execute.txt > diff.txt
-        
-        #read -n 1 -r -s -p "
-#NOTE: Press any key to continue
-#"
-        
-        echo "--------------------------------------------------------"
+		info "Doing output comparison."
+
+		if [ "$CAP_FAST" == "y" ]; then
+			diff -y $EXPECTED_FILE $EXECUTE_FILE >> $FAST_FILE
+		else
+			info "Lack of pipe character indicates lines are equal."
+			info "Expected file                                 | User Output File"
+
+			#Using -y because that makes two columns for viewing - easier to read.
+			# tee -a "$LOG_FILE" >&2
+			diff -y -W100 $EXPECTED_FILE $EXECUTE_FILE
+			diff -y -W100 $EXPECTED_FILE $EXECUTE_FILE >> "$LOG_FILE"
+		fi
+
+        info "--------------------------------------------------"
     fi
-    
-    echo "NOTE: Automated Style Checker executing."
-    echo "NOTE: This program assumes your style checker exists in ~/cs/."
-    
-    if [ ! -d ~/cs/ ]; then
-        echo "${bold}ERR:${normal} Could not find checkstyle in ~/cs/.  Please install Checkstyle to ~/cs/"
-        echo "Exiting program with status 5"
-        exit 5
-    fi
-    
-    echo $COMP_FILENAME_WITHOUT_JAVA > output_style.txt
-    ~/cs/checkstyle $COMP_FILENAME > output_style.txt 2> output_style_error.txt
-    
-    if [ $(stat -c%s output_style_error.txt) -gt 0 ]; then
-        echo "${bold}ERR:${normal} Errors occured while checking style.  Details in output_style_error.txt"
-    fi
-    
-    #This is some funky math.
-    #So, the amount of bytes written by checkstyle is 199 + name of file -.java
-    #So we check for size of file > (199 + length of program name)
-    #If greater, we have style errors.  If not, it's equal and we're good to go.
-    STYLE_FILESIZE=$(stat -c%s output_style.txt)
-    COMP_FILENAME_WITHOUT_JAVA=${COMP_FILENAME%.java}
-    
-    if [ "$STYLE_FILESIZE" -gt $(( 199 + ${#COMP_FILENAME_WITHOUT_JAVA} )) ]; then
-        echo "NOTE: Style errors detected.  ;-;"
-    else
-        echo "NOTE: No style errors detected.  Great!"
-    fi
-    
+
+	if [ "$CAP_FAST" != "y" ]; then
+		info "Automated Style Checker executing."
+		info "This program assumes your style checker exists in ~/cs/."
+
+		if [ ! -d ~/cs/ ]; then
+			error "Could not find checkstyle in ~/cs/.  Please install Checkstyle to ~/cs/"
+			error "Exiting program with status 5"
+			exit 5
+		fi
+
+		echo $COMP_FILENAME_WITHOUT_JAVA > $STYLE_FILE
+		~/cs/checkstyle $COMP_FILENAME > $STYLE_FILE 2> $STYLE_ERROR_FILE
+
+		if [ $(stat -c%s $STYLE_ERROR_FILE) -gt 0 ]; then
+			error "Errors occured while checking style.  Details in $STYLE_ERROR_FILE"
+		fi
+
+		#This is some funky math.
+		#So, the amount of bytes written by checkstyle is 199 + name of file -.java
+		#So we check for size of file > (199 + length of program name)
+		#If greater, we have style errors.  If not, it's equal and we're good to go.
+		STYLE_FILESIZE=$(stat -c%s $STYLE_FILE)
+		COMP_FILENAME_WITHOUT_JAVA=${COMP_FILENAME%.java}
+
+		if [ "$STYLE_FILESIZE" -gt $(( 199 + ${#COMP_FILENAME_WITHOUT_JAVA} )) ]; then
+			info "Style errors detected.  ;-;"
+		else
+			info "No style errors detected.  Great!"
+		fi
+	fi
+
 }
 
 #####################################################################
@@ -434,34 +431,34 @@ done
 
 #Check if size of java file is 0
 if [ ${#COMP_FILENAME} == 0 ]; then
-    echo "${bold}ERR:${normal} Lacking Java File Argument."
-    echo "Exiting program with status 0."
+    error "Lacking Java File Argument."
+    error "Exiting program with status 0."
     exit 0
 else
     #Making sure Argument 1 is a java file.  Or has a java extension at least.
     if  [[ $COMP_FILENAME != *.java ]]; then
-        echo "${bold}ERR:${normal} Java file argument lacks java extension."
-        echo "Exiting program with status 0."
+        error "Java file argument lacks java extension."
+        error "Exiting program with status 0."
         exit 0
     fi
 fi
 
 if [ ${#DIRECTORY} == 0 ]; then
-    echo "${bold}ERR:${normal} Lacking Directory Argument."
-    echo "Exiting program with status 0."
+    error "Lacking Directory Argument."
+    error "Exiting program with status 0."
     exit 0
 else
     #Making sure argument 2 is a directory.
     if [ ! -d $DIRECTORY ]; then
-        echo "${bold}ERR:${normal} Argument 2 is not a directory."
-        echo "Exiting program with status 0."
+        error "Argument 2 is not a directory."
+        error "Exiting program with status 0."
         exit 0
     fi
 fi
 
 if [ "$TIME_LIMIT" -le "0" ]; then
-    echo "${bold}ERR:${normal} Timeout limit provided 0, less than 0, or non-integer."
-    echo "Setting Timeout limit to default 15."
+    error "Timeout limit provided 0, less than 0, or non-integer."
+    info "Setting Timeout limit to default 15."
     TIME_LIMIT=15
     sleep 1
 fi
@@ -473,10 +470,10 @@ clear
 directoryCount=`find $DIRECTORY/* -maxdepth 1 -type d | wc -l`
 
 if [ $directoryCount -eq 0 ]; then
-    echo "NOTE: Did not detect subdirectories in $DIRECTORY, running RenameScript if it exists."
+    info "Did not detect subdirectories in $DIRECTORY, running RenameScript if it exists."
     if [ ! -r "RenameScript.java" ]; then
-        echo "${bold}ERR:${normal} RenameScript.java does not exist."
-        echo "Could not rename files.  Exiting program with status 0"
+        error "RenameScript.java does not exist."
+        error "Could not rename files.  Exiting program with status 0"
         exit 0
     else
         #Note to futuer self - make it detected whether to run javac or java only.
@@ -486,11 +483,11 @@ if [ $directoryCount -eq 0 ]; then
         java RenameScript $DIRECTORY
     fi
 else
-    echo "NOTE: Subdirectories detected in $DIRECTORY, RenameScript will not be executed."
+    info "Subdirectories detected in $DIRECTORY, RenameScript will not be executed."
 fi
 
 if [ -r "FirstLastToUnity.java" ] && [ -r "mapping.txt" ]; then
-    echo "Running UnityID Mapper."
+    info "Running UnityID Mapper."
     if [ ! -f "FirstLastToUnity.class" ]; then
         javac FirstLastToUnity.java
     fi
@@ -504,19 +501,19 @@ HAVE_INPUT=false
 if [ ${#EXPECTED_FILE} != 0 ]; then
     EXPECTED_FILE="$EXEC_DIR"/$EXPECTED_FILE
     if [ ! -r $EXPECTED_FILE ]; then
-        echo "${bold}ERR:${normal} Expected output file does not exist."
-        echo "Exiting program with status 0."
+        error "Expected output file does not exist."
+        error "Exiting program with status 0."
         exit 0
     else
         HAVE_OUTPUT=true
     fi
-    
+
     #We can only have an input file if we have an output file.
     if [ ${#INPUT_FILE} != 0 ]; then
         INPUT_FILE="$EXEC_DIR"/$INPUT_FILE
         if [ ! -r $EXPECTED_FILE ]; then
-            echo "${bold}ERR:${normal} Input file does not exist."
-            echo "Exiting program with status 0."
+            error "Input file does not exist."
+            error "Exiting program with status 0."
             exit 0
         else
             HAVE_INPUT=true
@@ -529,12 +526,13 @@ fi
 #Note to future self: this has to be last, because of file checks.
 cd $DIRECTORY
 
-FILE_COUNT="$(ls -1 $EXEC_DIR/$DIRECTORY | wc -l)"
+FILE_COUNT="$(ls -1 "$EXEC_DIR"/$DIRECTORY | wc -l)"
 
 #echo $FILE_COUNT
 
 if [ $FILE_COUNT -eq "1" ]; then
-    echo "Pretty sure that's an archive in there boss."
+    # echo "Pretty sure that's an archive in there boss."
+	info "Possible archive found in $DIRECTORY"
     for file in "$EXEC_DIR"/"$DIRECTORY"/*; do
         mv "$file" "${file// /_}" #convert all spaces to underscores, because /bruh/
         #echo $file
@@ -560,23 +558,20 @@ for d in *; do
         cd "${d}"
         if [ -r $COMP_FILENAME ]; then
             #clear
-            echo "NOTE: Current working directory: ${d}"
-            if [ "$CAP_FAST" == "y" ]; then        
-                capFast "$COMP_FILENAME"
-            else
-                compileAndExecuteAndStyle
-                if [ -f "$EXEC_DIR"/"ReportGenerator.sh" ]; then
-                    echo "--------------------------------------------------------"
-                    echo "NOTE: Generating Report based on output files."
-                    bash "$EXEC_DIR"/"ReportGenerator.sh" ./
-                    echo $(pwd) >> "Report.txt"
-                fi
-            fi
+            info "Current working directory: ${d}"
+			compileAndExecuteAndStyle
+			if [ -f "$EXEC_DIR"/"ReportGenerator.sh" ]; then
+				info "--------------------------------------------------"
+				info "Generating Report based on output files."
+				bash "$EXEC_DIR"/"ReportGenerator.sh" ./
+				echo $(pwd) >> "Report.txt"
+			fi
             sleep 1
         else
-            echo "${bold}ERR:${normal} File does not exist"
+            error "File does not exist"
         fi
         cd ..
+		info "--------------------------------------------------------"
     fi
 done
 
