@@ -151,6 +151,93 @@ warning() { echo "[WARNING] $@" | tee -a "$LOG_FILE" >&2 ; }
 error()   { echo "[ERROR]   $@" | tee -a "$LOG_FILE" >&2 ; }
 fatal()   { echo "[FATAL]   $@" | tee -a "$LOG_FILE" >&2 ; exit 1 ; }
 
+# End of global area.
+
+rename() {
+
+	if [ $# -eq 0 ]; then
+		fatal "You must specify a directory argument." # Use '-h' or '--help' for details"
+	fi
+
+	if [ ! -d $1 ]; then
+		fatal "ERR: Argument 1 is not a directory, or directory does not exist."
+	fi
+
+	rm -f *.log
+
+	#Saving argument 1.
+	DIRECTORY="$1"
+	echo "$DIRECTORY"
+
+	directoryCount=$(find "$DIRECTORY"/* -maxdepth 1 -type d | wc -l)
+
+	if [[ "$directoryCount" == "0" ]]; then
+		info "Did not detect subdirectories in ""$DIRECTORY"
+	else
+		info "Detected subdirectories in ""$DIRECTORY"
+	fi
+
+	cd "$DIRECTORY"
+
+	if [[ "$directoryCount" != "0" ]]; then
+		info "--------------------------------------------------"
+		for D in *; do
+			if [ -d "${D}" ]; then
+				if [[ "${D}" == *" "* ]]; then
+					DIR_NAME="${D// /_}"
+					info "Renaming ${D} to $DIR_NAME"
+					mv "${D}" "$DIR_NAME"
+					cd "$DIR_NAME"
+				else
+					cd "${D}"
+				fi
+				info "Currently working in: ""$(pwd)"
+				
+				for F in *; do
+					if [[ "${F}" == *"_"* ]]; then
+						FIL_NAME="${F##*_}"
+						info "Renaming ${F} to $FIL_NAME"
+						mv "${F}" "$FIL_NAME"
+					fi
+					# info "File: ""${F}"
+					
+					FILESIZE=$(stat -c%s "${FIL_NAME}")
+					if [[ "$FILESIZE" == "76" ]] && [[ "${F}" == *".html" ]]; then
+						warning "Detected Moodle downloaded HTML comment with no comment - deleting."
+						rm -f "$FILESIZE"
+					fi
+					
+				done
+				
+				info "--------------------------------------------------"
+				cd ..
+			fi
+		done
+	else
+		info "--------------------------------------------------"
+		for F in *; do
+			if [ -f "${F}" ] && [ ! -d "${F}" ]; then
+				STUDENT_NAME="${F%%_*}"
+				STUDENT_NAME="${STUDENT_NAME// /_}"
+				FILE_NAME="${F##*_}"
+				# info "Original Name: ""${F}"
+				# info "Student Name : ""$STUDENT_NAME"
+				# info "File Name    : ""$FILE_NAME"
+				if [ ! -d "$STUDENT_NAME" ]; then
+					info "Did not detect directory ""$STUDENT_NAME"", creating now."
+					mkdir "$STUDENT_NAME"
+				fi
+				info "Moving ""${F}"" to ""$STUDENT_NAME""/""$FILE_NAME"
+				mv "${F}" "$STUDENT_NAME"/"$FILE_NAME"
+			fi
+			info "--------------------------------------------------"
+		done
+	fi
+	
+	cd "$EXEC_DIR"
+	
+}
+
 compileAndExecuteAndStyle() {
 
 	# if [ "$CAP_FAST" == "y" ]; then
@@ -357,12 +444,11 @@ compileAndExecuteAndStyle() {
 #Sleep for a quick pause.
 sleep 0.25
 
-#Saving wherever we started
-#Needed because half this script works on relative position of everything.
-EXEC_DIR=$(pwd)
-
 #Don't forget to change directory to wherever we are.
 cd "$(dirname "$0")"
+
+# Saving wherever we started; Needed because half this script works on relative position
+EXEC_DIR=$(pwd)
 
 #Setting up for bolding error messages.
 bold=$(tput bold)
@@ -467,33 +553,33 @@ fi
 clear
 
 #Shamelessly stolen from stackoverflow, as per 90% of any production code is.
-directoryCount=`find $DIRECTORY/* -maxdepth 1 -type d | wc -l`
-
-if [ $directoryCount -eq 0 ]; then
-    info "Did not detect subdirectories in $DIRECTORY, running RenameScript if it exists."
-    if [ ! -r "RenameScript.java" ]; then
-        error "RenameScript.java does not exist."
-        error "Could not rename files.  Exiting program with status 0"
-        exit 0
-    else
-        #Note to futuer self - make it detected whether to run javac or java only.
-        if [ ! -f "RenameScript.class" ]; then
-            javac RenameScript.java
-        fi
-        java RenameScript $DIRECTORY
-    fi
-else
-    info "Subdirectories detected in $DIRECTORY, RenameScript will not be executed."
-fi
-
-if [ -r "FirstLastToUnity.java" ] && [ -r "mapping.txt" ]; then
-    info "Running UnityID Mapper."
-    if [ ! -f "FirstLastToUnity.class" ]; then
-        javac FirstLastToUnity.java
-    fi
-    java FirstLastToUnity $DIRECTORY
-    sleep 1
-fi
+# directoryCount=`find $DIRECTORY/* -maxdepth 1 -type d | wc -l`
+# 
+# if [ $directoryCount -eq 0 ]; then
+#     info "Did not detect subdirectories in $DIRECTORY, running RenameScript if it exists."
+#     if [ ! -r "RenameScript.java" ]; then
+#         error "RenameScript.java does not exist."
+#         error "Could not rename files.  Exiting program with status 0"
+#         exit 0
+#     else
+#         #Note to futuer self - make it detected whether to run javac or java only.
+#         if [ ! -f "RenameScript.class" ]; then
+#             javac RenameScript.java
+#         fi
+#         java RenameScript $DIRECTORY
+#     fi
+# else
+#     info "Subdirectories detected in $DIRECTORY, RenameScript will not be executed."
+# fi
+# 
+# if [ -r "FirstLastToUnity.java" ] && [ -r "mapping.txt" ]; then
+#     info "Running UnityID Mapper."
+#     if [ ! -f "FirstLastToUnity.class" ]; then
+#         javac FirstLastToUnity.java
+#     fi
+#     java FirstLastToUnity $DIRECTORY
+#     sleep 1
+# fi
 
 HAVE_OUTPUT=false
 HAVE_INPUT=false
@@ -521,10 +607,12 @@ if [ ${#EXPECTED_FILE} != 0 ]; then
     fi
 fi
 
+rename "$DIRECTORY"
+
 #Change directory to the directory of many folders.
 #Life has many directories edboy
 #Note to future self: this has to be last, because of file checks.
-cd $DIRECTORY
+cd "$DIRECTORY"
 
 FILE_COUNT="$(ls -1 "$EXEC_DIR"/$DIRECTORY | wc -l)"
 
