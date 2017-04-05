@@ -182,7 +182,7 @@ rename() {
 
 	#Saving argument 1.
 	DIRECTORY="$1"
-	echo "$DIRECTORY"
+	# echo "$DIRECTORY"
 
 	directoryCount=$(find "$DIRECTORY"/* -maxdepth 1 -type d | wc -l)
 
@@ -209,19 +209,22 @@ rename() {
 				info "Currently working in: ""$(pwd)"
 				
 				for F in *; do
-					if [[ "${F}" == *"_"* ]]; then
-						FIL_NAME="${F##*_}"
-						info "Renaming ${F} to $FIL_NAME"
-						mv "${F}" "$FIL_NAME"
-					fi
-					# info "File: ""${F}"
+				    if [[ "${F}" != "output"*".txt" ]]; then
+				        if [[ "${F}" == *"_"* ]]; then
+						    FIL_NAME="${F##*_}"
+						    info "Renaming ${F} to $FIL_NAME"
+						    mv "${F}" "$FIL_NAME"
+						else
+							FIL_NAME="${F}"
+					    fi
+					    # info "File: ""${F}"
 					
-					FILESIZE=$(stat -c%s "${FIL_NAME}")
-					if [[ "$FILESIZE" == "76" ]] && [[ "${F}" == *".html" ]]; then
-						warning "Detected Moodle downloaded HTML comment with no comment - deleting."
-						rm -f "$FILESIZE"
-					fi
-					
+					    FILESIZE=$(stat -c%s "${FIL_NAME}")
+					    if [[ "$FILESIZE" == "76" ]] && [[ "$FIL_NAME" == *".html" ]]; then
+						    warning "Detected Moodle downloaded HTML comment with no comment - deleting."
+						    rm -f "$FILESIZE"
+					    fi
+				    fi
 				done
 				
 				info "--------------------------------------------------"
@@ -251,6 +254,96 @@ rename() {
 	
 	cd "$EXEC_DIR"
 	
+}
+
+report() {
+
+    TabLines=0
+    IncInden=0
+    JvdMisng=0
+    WtsMisng=0
+    RetMisng=0
+    ParMisng=0
+    TrwMisng=0
+    MgcNumbr=0
+    TypWrong=0
+    CstWrong=0
+    MtdWrong=0
+    PrmWrong=0
+    LongLine=0
+    uknownError=0
+
+    for F in *; do
+        if [[ $"{F}" == "output"*".txt" ]]; then
+            FILE_NAME=${F}
+            FILE_NAME="${FILE_NAME##/*/}"
+            printf "%s\n" "--------------------------------------------------" >> Report.txt
+            printf "$FILE_NAME\n" >> Report.txt
+            if [[ "$FILE_NAME" == "output_style.txt" ]]; then
+                #Saving IFS
+                old=$IFS
+                IFS=$'\n'
+                for line in `cat $FILE_NAME`; do
+                    if [[ "$line" == *$DIR* ]]; then
+                        line=${line##*/}
+                        
+                        if [[ "$line" == *"tab"* ]];                    then let "TabLines += 1"
+                        elif [[ "$line" == *"indentation"* ]];          then let "IncInden += 1"
+                        elif [[ "$line" == *"@author"* ]];              then let "hasAuthorTag += 1"
+                        elif [[ "$line" == *"Missing a Javadoc"* ]];    then let "JvdMisng += 1"
+                        elif [[ "$line" == *"WhitespaceAround"* ]];     then let "WtsMisng += 1"
+                        elif [[ "$line" == *"@return"* ]];              then let "RetMisng += 1"
+                        elif [[ "$line" == *"@param"* ]];               then let "ParMisng += 1"
+                        elif [[ "$line" == *"@throws"* ]];              then let "TrwMisng += 1"
+                        elif [[ "$line" == *"magic"* ]];                then let "MgcNumbr += 1"
+                        elif [[ "$line" == *"match pattern"* ]]; then
+                            if [[ "$line" == *"Type"* ]];               then let "TypWrong += 1"
+                            elif [[ "$line" == *"Constant"* ]];         then let "CstWrong += 1"
+                            elif [[ "$line" == *"Method"* ]];           then let "MtdWrong += 1"
+                            elif [[ "$line" == *"Parameter"* ]];        then let "PrmWrong += 1"; fi
+                        elif [[ "$line" == *"longer than"* ]];          then let "LongLine += 1"
+                        else
+                            let "uknownError += 1"
+                            #echo $line
+                            printf "UNKNOWN STYLE ERROR:\n" >> Report.txt
+                            printf "$line\n" >> Report.txt
+                        fi
+                    fi
+                done
+                IFS=$old
+                
+                echo "" >> Report.txt
+                echo "CHECKSTYLE ERRORS: " >> Report.txt
+                if (( hasAuthorTag != 0 )); then printf "File lacks an @author Tag.\n" >> Report.txt; fi
+                
+                echo "Lines with tab characters detected : $TabLines" >> Report.txt
+                
+                if (( TabLines != 0 )) && (( IncInden != 0 )); then
+                    echo "Warning: Incorrect indentation could be due to tab characters."  >> Report.txt
+                fi
+                
+                echo "Whitespace errors (operators/loops): $WtsMisng" >> Report.txt
+                echo "Detected magic numbers             : $MgcNumbr" >> Report.txt
+                echo "Number of lines longer than allowed: $LongLine" >> Report.txt
+                echo "Number of types incorrectly named  : $TypWrong" >> Report.txt
+                echo "       methods incorrectly named   : $CstWrong" >> Report.txt
+                echo "       parameters incorrectly named: $MtdWrong" >> Report.txt
+                echo "Number of unknown errors detected  : $uknownError" >> Report.txt
+                
+                echo "" >> Report.txt
+                echo "JAVADOC ERRORS   : " >> Report.txt
+                echo "Lines with missing Javadoc Comments: $JvdMisng" >> Report.txt
+                echo "Missing/Incorrect @return tags     : $RetMisng" >> Report.txt
+                echo "Missing/Incorrect @param tags      : $ParMisng" >> Report.txt
+                echo "Missing/Incorrect @throws tags     : $TrwMisng" >> Report.txt
+            
+                #cat "$FILE_NAME" | grep $DIR >> Report.txt
+            elif [[ "$FILE_NAME" == output*.txt ]]; then
+                cat "$FILE_NAME" >> Report.txt
+            fi
+        fi
+    done
+
 }
 
 compileAndExecuteAndStyle() {
@@ -457,7 +550,7 @@ compileAndExecuteAndStyle() {
 #####################################################################
 
 #Sleep for a quick pause.
-sleep 0.25
+# sleep 0.25
 
 #Don't forget to change directory to wherever we are.
 cd "$(dirname "$0")"
@@ -564,9 +657,6 @@ if [ "$TIME_LIMIT" -le "0" ]; then
     sleep 1
 fi
 
-#Cleaning everything up.
-clear
-
 #Shamelessly stolen from stackoverflow, as per 90% of any production code is.
 # directoryCount=`find $DIRECTORY/* -maxdepth 1 -type d | wc -l`
 # 
@@ -650,8 +740,8 @@ if [ $FILE_COUNT -eq "1" ]; then
     done
 fi
 
-sleep 1
-clear
+# sleep 1
+# clear
 
 #The working loop.  Loops through each directory in the supplied directory,
 #And runs the compilation function on it, with the filename argument.
@@ -663,12 +753,13 @@ for d in *; do
             #clear
             info "Current working directory: ${d}"
 			compileAndExecuteAndStyle
-			if [ -f "$EXEC_DIR"/"ReportGenerator.sh" ]; then
-				info "--------------------------------------------------"
-				info "Generating Report based on output files."
-				bash "$EXEC_DIR"/"ReportGenerator.sh" ./
-				echo $(pwd) >> "Report.txt"
-			fi
+			report "${d}"
+			# if [ -f "$EXEC_DIR"/"ReportGenerator.sh" ]; then
+			# 	info "--------------------------------------------------"
+			# 	info "Generating Report based on output files."
+			# 	bash "$EXEC_DIR"/"ReportGenerator.sh" ./
+			# 	echo $(pwd) >> "Report.txt"
+			# fi
             sleep 1
         else
             error "File does not exist"
