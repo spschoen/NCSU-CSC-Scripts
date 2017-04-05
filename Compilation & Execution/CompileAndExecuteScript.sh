@@ -182,7 +182,7 @@ rename() {
 
 	#Saving argument 1.
 	DIRECTORY="$1"
-	echo "$DIRECTORY"
+	# echo "$DIRECTORY"
 
 	directoryCount=$(find "$DIRECTORY"/* -maxdepth 1 -type d | wc -l)
 
@@ -214,11 +214,13 @@ rename() {
 						    FIL_NAME="${F##*_}"
 						    info "Renaming ${F} to $FIL_NAME"
 						    mv "${F}" "$FIL_NAME"
+						else
+							FIL_NAME="${F}"
 					    fi
 					    # info "File: ""${F}"
 					
 					    FILESIZE=$(stat -c%s "${FIL_NAME}")
-					    if [[ "$FILESIZE" == "76" ]] && [[ "${F}" == *".html" ]]; then
+					    if [[ "$FILESIZE" == "76" ]] && [[ "$FIL_NAME" == *".html" ]]; then
 						    warning "Detected Moodle downloaded HTML comment with no comment - deleting."
 						    rm -f "$FILESIZE"
 					    fi
@@ -548,7 +550,7 @@ compileAndExecuteAndStyle() {
 #####################################################################
 
 #Sleep for a quick pause.
-sleep 0.25
+# sleep 0.25
 
 #Don't forget to change directory to wherever we are.
 cd "$(dirname "$0")"
@@ -655,9 +657,6 @@ if [ "$TIME_LIMIT" -le "0" ]; then
     sleep 1
 fi
 
-#Cleaning everything up.
-clear
-
 #Shamelessly stolen from stackoverflow, as per 90% of any production code is.
 # directoryCount=`find $DIRECTORY/* -maxdepth 1 -type d | wc -l`
 # 
@@ -741,8 +740,8 @@ if [ $FILE_COUNT -eq "1" ]; then
     done
 fi
 
-sleep 1
-clear
+# sleep 1
+# clear
 
 #The working loop.  Loops through each directory in the supplied directory,
 #And runs the compilation function on it, with the filename argument.
