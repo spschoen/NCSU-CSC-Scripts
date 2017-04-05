@@ -2,13 +2,13 @@
 # Compilation and Execution Script
 This script is the largest and most unwieldy.  It does everything short of delivering grades.  Sadly, I'm not as good as Dr. Lasher - yet.
 
+( Script grading planned for Fall 2017 )
+
 * Written by Samuel Schoeneberger (spschoen@ncsu.edu)
 * Bash / Shell
 * Compiles/Executes, Runs style checker (assumes presence of style checker in ~/cs/)
 * (Optional) Compares program output to expected output.  Uses input files given by user.
-* REQUIREMENTS (details where to download these files relative to actual script in file):
-  * RenameScript.java - Has to have been run or at least downloaded.
-  * GenerateReport.java - Summarizes output into easier to read files.
+* Optional File - GenerateReport.sh - Summarizes output into easier to read files.  Found in Report Generation
 
 Execution of script:
   * sh CompileAndExecuteScript -h for help

@@ -5,9 +5,9 @@
 # Moodle.  Generates 2 output files for each step - an              #
 # output_[step].txt file, and an output_[step]_error.txt file,      #
 # both from stdout and stderr.                                      #
+#                                                                   #
 # Also generates a report based on output files if you have         #
-# GenerateReports.java in the same directory, which generates       #
-# a Report.txt file for each submission                             #
+# GenerateReport.sh in the same directory as this script.           #
 #                                                                   #
 # Required Arguments: -p .java file to compile                      #
 #                     -d directory of student programs.             #
@@ -19,10 +19,6 @@
 #                     -t to set custom timeout limit.               #
 #                                                                   #
 # Use: sh CompileAndExecuteScript -p file.java -d dir/ [optionals]  #
-#                                                                   #
-# Note: This script assumes you have Zach Butler &                  #
-#   Dr. Jessica Schmidt's RenameScript program in the               #
-#   same directory.                                                 #
 #                                                                   #
 # Note: This program optionally expects an expected file AND        #
 #   an input file, or just an expected file.  It will not work      #
@@ -50,6 +46,14 @@
 #    matches the expected.  Then, delete the archive file.          #
 # 4. Run the script.                                                #
 #                                                                   #
+# Update 17/04/05 - Script now uses a new rename script that        #
+#                   can rename moodle files whether they are        #
+#                   downloaded as all files in one directory        #
+#                   or in multiple directories to begin with        #
+#                                                                   #
+#                   Oh my god I cannot believe all the lines        #
+#                   are equal length! I AM A PROGRAMMING GOD        #
+#                                                                   #
 #####################################################################
 
 #####################################################################
@@ -64,7 +68,6 @@
 # Expected file/directory structure (before script):                #
 # Directory                                                         #
 #  -- CompileAndExecuteScript.sh                                    #
-#  -- RenameScript.java                                             #
 #  -- GenerateReport.java                                           #
 #  -- Assignment Directory                                          #
 #      -- Student_Numbers_assignmsubmission_file_JavaProgram.java   #
@@ -78,7 +81,6 @@
 # Expected file/directory structure (after script):                 #
 # Directory                                                         #
 #  -- CompileAndExecuteScript.sh                                    #
-#  -- RenameScript.java                                             #
 #  -- GenerateReport.java                                           #
 #  -- Assignment Directory                                          #
 #      -- Student 1 Directory (UnityID if FirstLastToUnity is used) #
@@ -99,25 +101,38 @@
 #####################################################################
 #                                                                   #
 # Changelog                                                         #
-#   v0   - 16/09/12 - Initial version.                              #
-#   v0.1 - 16/09/29 - Updated documentation. SO MUCH DOCUMENTATION. #
-#              Started work on arguments.                           #
-#              Integrated RenameScript.java                         #
-#   v0.2 - 16/10/04 - Started adding optional expected files.       #
-#   v1.0 - 16/10/11 - Added optional expected files.                #
-#              Started work on adding optional input files.         #
-#   v1.1 - 16/10/21 - Integrated GenerateReport.java                #
-#              GenerateReport is currently required, will make      #
-#              optional once I get to a proper terminal.            #
-#              Fixed checking for Stylechecker                      #
-#   v1.2 - 16/11/10 - RenameScript is automatically run when needed #
-#   v1.3 - 16/11/17 - Integrated FirstLastToUnity usage.            #
-#   v1.3 - 16/11/17 - Added fast compilation mode, final arg y/n    #
-#   v1.4 - 16/12/09 - Removed argument option, made execution       #
-#              optional.  Use -n or --no-execute.                   #
-#   v1.5 - 17/01/03 - Fixed execution so infinite loops are handled #
-#                       and added argument option for timeout.      #
-#   v1.6 - 17/03/25 - Documentation, log files, some extra goodies. #
+#   v0.0.0 - 16/09/12 - Initial version.                            #
+#                                                                   #
+#   v0.1.0 - 16/09/29 - Updated documentation.                      #
+#                       SO MUCH DOCUMENTATION.                      #
+#                       Started work on arguments.                  #
+#                       Integrated RenameScript.java                #
+#                                                                   #
+#   v0.2.0 - 16/10/04 - Started adding optional expected files.     #
+#                                                                   #
+#   v1.0.0 - 16/10/11 - Added optional expected files.              #
+#                       Started work on adding optional input files #
+#                                                                   #
+#   v1.1.0 - 16/10/21 - Integrated GenerateReport.java              #
+#                       Fixed checking for Stylechecker             #
+#                                                                   #
+#   v1.2.0 - 16/11/10 - RenameScript is automatically run if needed #
+#                                                                   #
+#   v1.3.0 - 16/11/17 - Integrated FirstLastToUnity usage.          #
+#                                                                   #
+#   v1.3.1 - 16/11/17 - Added fast compilation mode, final arg y/n  #
+#                                                                   #
+#   v1.4.0 - 16/12/09 - Removed argument option, made execution     #
+#                       optional.  Use -n or --no-execute.          #
+#                                                                   #
+#   v1.5.0 - 17/01/03 - Fixed execution so infinite loops are       #
+#                       handled and added argument option for       #
+#                       timeout.                                    #
+#                                                                   #
+#   v1.6.0 - 17/03/25 - Documentation, log files, some extras       #
+#                                                                   #
+#   v1.6.1 - 17/04/05 - Updated Readme to show removal of           #
+#                       RenameScript.java                           #
 #                                                                   #
 #####################################################################
 
