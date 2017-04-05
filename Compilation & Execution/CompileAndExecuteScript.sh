@@ -209,19 +209,20 @@ rename() {
 				info "Currently working in: ""$(pwd)"
 				
 				for F in *; do
-					if [[ "${F}" == *"_"* ]]; then
-						FIL_NAME="${F##*_}"
-						info "Renaming ${F} to $FIL_NAME"
-						mv "${F}" "$FIL_NAME"
-					fi
-					# info "File: ""${F}"
+				    if [[ "${F}" != "output"*".txt" ]]; then
+				        if [[ "${F}" == *"_"* ]]; then
+						    FIL_NAME="${F##*_}"
+						    info "Renaming ${F} to $FIL_NAME"
+						    mv "${F}" "$FIL_NAME"
+					    fi
+					    # info "File: ""${F}"
 					
-					FILESIZE=$(stat -c%s "${FIL_NAME}")
-					if [[ "$FILESIZE" == "76" ]] && [[ "${F}" == *".html" ]]; then
-						warning "Detected Moodle downloaded HTML comment with no comment - deleting."
-						rm -f "$FILESIZE"
-					fi
-					
+					    FILESIZE=$(stat -c%s "${FIL_NAME}")
+					    if [[ "$FILESIZE" == "76" ]] && [[ "${F}" == *".html" ]]; then
+						    warning "Detected Moodle downloaded HTML comment with no comment - deleting."
+						    rm -f "$FILESIZE"
+					    fi
+				    fi
 				done
 				
 				info "--------------------------------------------------"
@@ -255,24 +256,6 @@ rename() {
 
 report() {
 
-    if [ $# -ne 1 ]; then
-        echo "ERR: Number of given arguments incorrect."
-        echo "Expected [directory of directories to distribute file to]"
-        echo "Exiting program with status 0."
-        exit 0
-    fi
-
-    if [ ! -d $1 ]; then
-        echo "ERR: Argument 1 is not a directory, or directory does not exist."
-        echo "Exiting program with status 0."
-    fi
-    
-    CURRENT_LOCATION="$(pwd)"
-
-    #Saving argument 1.
-    DIRECTORY="$1"
-
-    cd $DIRECTORY
     TabLines=0
     IncInden=0
     JvdMisng=0
@@ -288,101 +271,76 @@ report() {
     LongLine=0
     uknownError=0
 
-    for d in *; do
-        if [ -d "${d}" ]; then
-            echo "--------------------------------------------------"
-            cd "${d}"
-            DIR="${d}"
-            DIR="${DIR##/*/}"
-            echo "Directory: $DIR"
-            #COMMANDS GO HERE
-            
-            if [ -f "Report.txt" ]; then
-                echo "Removing Report.txt"
-                rm -f "Report.txt"
-            fi
-            
-            echo "Generating Report."
-
-            for F in *; do
-                FILE_NAME=${F}
-                FILE_NAME="${FILE_NAME##/*/}"
-                if [[ "$FILE_NAME" == *.txt ]]; then
-                    printf "%s\n" "--------------------------------------------------" >> Report.txt
-                    printf "$FILE_NAME\n" >> Report.txt
-                fi
-                
-                if [[ "$FILE_NAME" == "output_style.txt" ]]; then
-                    #Saving IFS
-                    old=$IFS
-                    IFS=$'\n'
-                    for line in `cat $FILE_NAME`; do
-                        if [[ "$line" == *$DIR* ]]; then
-                            line=${line##*/}
-                            
-                            if [[ "$line" == *"tab"* ]];                    then let "TabLines += 1"
-                            elif [[ "$line" == *"indentation"* ]];          then let "IncInden += 1"
-                            elif [[ "$line" == *"@author"* ]];              then let "hasAuthorTag += 1"
-                            elif [[ "$line" == *"Missing a Javadoc"* ]];    then let "JvdMisng += 1"
-                            elif [[ "$line" == *"WhitespaceAround"* ]];     then let "WtsMisng += 1"
-                            elif [[ "$line" == *"@return"* ]];              then let "RetMisng += 1"
-                            elif [[ "$line" == *"@param"* ]];               then let "ParMisng += 1"
-                            elif [[ "$line" == *"@throws"* ]];              then let "TrwMisng += 1"
-                            elif [[ "$line" == *"magic"* ]];                then let "MgcNumbr += 1"
-                            elif [[ "$line" == *"match pattern"* ]]; then
-                                if [[ "$line" == *"Type"* ]];               then let "TypWrong += 1"
-                                elif [[ "$line" == *"Constant"* ]];         then let "CstWrong += 1"
-                                elif [[ "$line" == *"Method"* ]];           then let "MtdWrong += 1"
-                                elif [[ "$line" == *"Parameter"* ]];        then let "PrmWrong += 1"; fi
-                            elif [[ "$line" == *"longer than"* ]];          then let "LongLine += 1"
-                            else
-                                let "uknownError += 1"
-                                #echo $line
-                                printf "UNKNOWN STYLE ERROR:\n" >> Report.txt
-                                printf "$line\n" >> Report.txt
-                            fi
-                        fi
-                    done
-                    IFS=$old
-                    
-                    echo "" >> Report.txt
-                    echo "CHECKSTYLE ERRORS: " >> Report.txt
-                    if (( hasAuthorTag != 0 )); then printf "File lacks an @author Tag.\n" >> Report.txt; fi
-                    
-                    echo "Lines with tab characters detected : $TabLines" >> Report.txt
-                    
-                    if (( TabLines != 0 )) && (( IncInden != 0 )); then
-                        echo "Warning: Incorrect indentation could be due to tab characters."  >> Report.txt
-                    fi
-                    
-                    echo "Whitespace errors (operators/loops): $WtsMisng" >> Report.txt
-                    echo "Detected magic numbers             : $MgcNumbr" >> Report.txt
-                    echo "Number of lines longer than allowed: $LongLine" >> Report.txt
-                    echo "Number of types incorrectly named  : $TypWrong" >> Report.txt
-                    echo "       methods incorrectly named   : $CstWrong" >> Report.txt
-                    echo "       parameters incorrectly named: $MtdWrong" >> Report.txt
-                    echo "Number of unknown errors detected  : $uknownError" >> Report.txt
-                    
-                    echo "" >> Report.txt
-                    echo "JAVADOC ERRORS   : " >> Report.txt
-                    echo "Lines with missing Javadoc Comments: $JvdMisng" >> Report.txt
-                    echo "Missing/Incorrect @return tags     : $RetMisng" >> Report.txt
-                    echo "Missing/Incorrect @param tags      : $ParMisng" >> Report.txt
-                    echo "Missing/Incorrect @throws tags     : $TrwMisng" >> Report.txt
-                
-                    #cat "$FILE_NAME" | grep $DIR >> Report.txt
-                elif [[ "$FILE_NAME" == output*.txt ]]; then
-                    cat "$FILE_NAME" >> Report.txt
-                fi
-            done
+    for F in *; do
+        if [[ $"{F}" == "output"*".txt" ]]; then
+            FILE_NAME=${F}
+            FILE_NAME="${FILE_NAME##/*/}"
             printf "%s\n" "--------------------------------------------------" >> Report.txt
-
-            #COMMANDS STOP HERE
-            cd ..
+            printf "$FILE_NAME\n" >> Report.txt
+            if [[ "$FILE_NAME" == "output_style.txt" ]]; then
+                #Saving IFS
+                old=$IFS
+                IFS=$'\n'
+                for line in `cat $FILE_NAME`; do
+                    if [[ "$line" == *$DIR* ]]; then
+                        line=${line##*/}
+                        
+                        if [[ "$line" == *"tab"* ]];                    then let "TabLines += 1"
+                        elif [[ "$line" == *"indentation"* ]];          then let "IncInden += 1"
+                        elif [[ "$line" == *"@author"* ]];              then let "hasAuthorTag += 1"
+                        elif [[ "$line" == *"Missing a Javadoc"* ]];    then let "JvdMisng += 1"
+                        elif [[ "$line" == *"WhitespaceAround"* ]];     then let "WtsMisng += 1"
+                        elif [[ "$line" == *"@return"* ]];              then let "RetMisng += 1"
+                        elif [[ "$line" == *"@param"* ]];               then let "ParMisng += 1"
+                        elif [[ "$line" == *"@throws"* ]];              then let "TrwMisng += 1"
+                        elif [[ "$line" == *"magic"* ]];                then let "MgcNumbr += 1"
+                        elif [[ "$line" == *"match pattern"* ]]; then
+                            if [[ "$line" == *"Type"* ]];               then let "TypWrong += 1"
+                            elif [[ "$line" == *"Constant"* ]];         then let "CstWrong += 1"
+                            elif [[ "$line" == *"Method"* ]];           then let "MtdWrong += 1"
+                            elif [[ "$line" == *"Parameter"* ]];        then let "PrmWrong += 1"; fi
+                        elif [[ "$line" == *"longer than"* ]];          then let "LongLine += 1"
+                        else
+                            let "uknownError += 1"
+                            #echo $line
+                            printf "UNKNOWN STYLE ERROR:\n" >> Report.txt
+                            printf "$line\n" >> Report.txt
+                        fi
+                    fi
+                done
+                IFS=$old
+                
+                echo "" >> Report.txt
+                echo "CHECKSTYLE ERRORS: " >> Report.txt
+                if (( hasAuthorTag != 0 )); then printf "File lacks an @author Tag.\n" >> Report.txt; fi
+                
+                echo "Lines with tab characters detected : $TabLines" >> Report.txt
+                
+                if (( TabLines != 0 )) && (( IncInden != 0 )); then
+                    echo "Warning: Incorrect indentation could be due to tab characters."  >> Report.txt
+                fi
+                
+                echo "Whitespace errors (operators/loops): $WtsMisng" >> Report.txt
+                echo "Detected magic numbers             : $MgcNumbr" >> Report.txt
+                echo "Number of lines longer than allowed: $LongLine" >> Report.txt
+                echo "Number of types incorrectly named  : $TypWrong" >> Report.txt
+                echo "       methods incorrectly named   : $CstWrong" >> Report.txt
+                echo "       parameters incorrectly named: $MtdWrong" >> Report.txt
+                echo "Number of unknown errors detected  : $uknownError" >> Report.txt
+                
+                echo "" >> Report.txt
+                echo "JAVADOC ERRORS   : " >> Report.txt
+                echo "Lines with missing Javadoc Comments: $JvdMisng" >> Report.txt
+                echo "Missing/Incorrect @return tags     : $RetMisng" >> Report.txt
+                echo "Missing/Incorrect @param tags      : $ParMisng" >> Report.txt
+                echo "Missing/Incorrect @throws tags     : $TrwMisng" >> Report.txt
+            
+                #cat "$FILE_NAME" | grep $DIR >> Report.txt
+            elif [[ "$FILE_NAME" == output*.txt ]]; then
+                cat "$FILE_NAME" >> Report.txt
+            fi
         fi
     done
-
-    cd "$CURRENT_LOCATION"
 
 }
 
