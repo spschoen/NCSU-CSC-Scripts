@@ -134,6 +134,12 @@
 #   v1.6.1 - 17/04/05 - Updated Readme to show removal of           #
 #                       RenameScript.java                           #
 #                                                                   #
+#   v1.6.2 - 17/04/17 - Fixed a bug with report(), reports now gen. #
+#                       Added copyfile functionality, -c            #
+#                       Fixed a bug where the script failed to      #
+#                       execute any java programs.  /shrug          #
+#                                                                   #
+#                                                                   #
 #####################################################################
 
 #####################################################################
@@ -165,17 +171,20 @@ info()    { echo "[INFO]    $@" | tee -a "$LOG_FILE" >&2 ; }
 warning() { echo "[WARNING] $@" | tee -a "$LOG_FILE" >&2 ; }
 error()   { echo "[ERROR]   $@" | tee -a "$LOG_FILE" >&2 ; }
 fatal()   { echo "[FATAL]   $@" | tee -a "$LOG_FILE" >&2 ; exit 1 ; }
+debug()   { if [[ "$DEBUG" == "true" ]]; then 
+			echo "[DEBUG]   $@" | tee -a "$LOG_FILE" >&2
+			fi ; }
 
 # End of global area.
 
 rename() {
 
 	if [ $# -eq 0 ]; then
-		fatal "You must specify a directory argument." # Use '-h' or '--help' for details"
+		fatal "Rename: You must specify a directory argument." # Use '-h' or '--help' for details"
 	fi
 
 	if [ ! -d $1 ]; then
-		fatal "ERR: Argument 1 is not a directory, or directory does not exist."
+		fatal "Rename: Argument 1 is not a directory, or directory does not exist."
 	fi
 
 	rm -f *.log
@@ -204,9 +213,12 @@ rename() {
 					mv "${D}" "$DIR_NAME"
 					cd "$DIR_NAME"
 				else
+					info "Did not need to rename ""${D}"
 					cd "${D}"
 				fi
-				info "Currently working in: ""$(pwd)"
+				DIR_NAME="$(pwd)"
+				DIR_NAME="${DIR_NAME%*/}"
+				info "Currently working in: ""$DIR_NAME"
 				
 				for F in *; do
 				    if [[ "${F}" != "output"*".txt" ]]; then
@@ -216,6 +228,7 @@ rename() {
 						    mv "${F}" "$FIL_NAME"
 						else
 							FIL_NAME="${F}"
+							info "Did not need to rename ""${F}"
 					    fi
 					    # info "File: ""${F}"
 					
@@ -258,6 +271,17 @@ rename() {
 
 report() {
 
+	DIR_NAME="$(pwd)"
+	DIR_NAME="${DIR_NAME%*/}"
+
+	info "--------------------------------------------------"
+	info "Running report for $DIR_NAME"
+	
+	if [ -f "Report.txt" ]; then
+		debug "Removing previous report."
+		rm -f "Report.txt"
+	fi
+
     TabLines=0
     IncInden=0
     JvdMisng=0
@@ -274,17 +298,20 @@ report() {
     uknownError=0
 
     for F in *; do
-        if [[ $"{F}" == "output"*".txt" ]]; then
-            FILE_NAME=${F}
+		debug "${F}"
+        if [[ "${F}" == "output_"*".txt" ]]; then
+            FILE_NAME="${F}"
             FILE_NAME="${FILE_NAME##/*/}"
+			debug "$FILE_NAME"
             printf "%s\n" "--------------------------------------------------" >> Report.txt
             printf "$FILE_NAME\n" >> Report.txt
             if [[ "$FILE_NAME" == "output_style.txt" ]]; then
+				debug "Working in output_style parsing."
                 #Saving IFS
                 old=$IFS
                 IFS=$'\n'
                 for line in `cat $FILE_NAME`; do
-                    if [[ "$line" == *$DIR* ]]; then
+                    if [[ "$line" == *".java"* ]] && [[ "$line" != *">>"* ]]; then
                         line=${line##*/}
                         
                         if [[ "$line" == *"tab"* ]];                    then let "TabLines += 1"
@@ -339,10 +366,39 @@ report() {
             
                 #cat "$FILE_NAME" | grep $DIR >> Report.txt
             elif [[ "$FILE_NAME" == output*.txt ]]; then
+				debug "Catting ""$FILE_NAME"" to Report."
                 cat "$FILE_NAME" >> Report.txt
             fi
         fi
     done
+	
+	rm -f "output_"*".txt"
+
+}
+
+copyFile() {
+
+	if [ $# -ne 2 ]; then
+		error "Not given expected arguments."
+		fatal "Expected [directory of directories to distribute file to] [file to distribute]"
+	fi
+
+	if [ ! -d $1 ]; then
+		error "Argument 1 is not a directory, or directory does not exist."
+		fatal "Exiting program with status 0."
+	fi
+
+	#Saving argument 1.
+	DIRECTORY="$1"
+
+	#Making sure argument 2 is a file.
+	if [ ! -f $2 ]; then
+		error "Argument 2 is not a file, or does not exist."
+		fatal "Exiting program with status 0."
+		exit 0
+	fi
+	
+	cp "$2" "$DIRECTORY"
 
 }
 
@@ -360,8 +416,8 @@ compileAndExecuteAndStyle() {
 			return
 		fi
 
-		if [ ! -f $EXEC_FILENAME ]; then
-			error "$EXEC_FILENAME not found or could not be read."
+		if [ ! -f "$EXEC_FILENAME" ]; then
+			error ""$EXEC_FILENAME" not found or could not be read."
 			return
 		fi
 	fi
@@ -430,15 +486,15 @@ compileAndExecuteAndStyle() {
     if [ "$NO_EXEC" = "n" ]; then
 
 		# Replace .java with .class.
-		EXEC_FILENAME="${COMP_FILENAME%.java}.class"
+		EXEC_FILENAME="${COMP_FILENAME%.java}"
 
-		if [ ! -r $EXEC_FILENAME ]; then
+		if [ ! -r "$EXEC_FILENAME".class ]; then
 			warning "Class not found, or readable.  Skipping execution."
 			return
 		fi
 
         #Drop the .java from the filename, execute from that.
-        info "Attempting to execute $EXEC_FILENAME"
+        info "Attempting to execute "$EXEC_FILENAME""
         info "Output and errors will be printed to $EXECUTE_FILE and $EXECUTE_ERROR_FILE"
 
 		#Execute the program to the output files.
@@ -446,30 +502,30 @@ compileAndExecuteAndStyle() {
 			read -t 1 -n 10000 discard
             if [ ${#ARGUMENT} -eq 0 ]; then
 				if [ "$CAP_FAST" == "y" ]; then
-					timeout $TIME_LIMIT java $EXEC_FILENAME <$INPUT_FILE > $FAST_FILE 2>> $FAST_FILE
+					timeout $TIME_LIMIT java "$EXEC_FILENAME" <$INPUT_FILE > $FAST_FILE 2>> $FAST_FILE
 				else
-					timeout $TIME_LIMIT java $EXEC_FILENAME <$INPUT_FILE > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
+					timeout $TIME_LIMIT java "$EXEC_FILENAME" <$INPUT_FILE > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
 				fi
             else
 				if [ "$CAP_FAST" == "y" ]; then
-					timeout $TIME_LIMIT java $EXEC_FILENAME $ARGUMENT <$INPUT_FILE > $FAST_FILE 2>> $FAST_FILE
+					timeout $TIME_LIMIT java "$EXEC_FILENAME" $ARGUMENT <$INPUT_FILE > $FAST_FILE 2>> $FAST_FILE
 				else
-					timeout $TIME_LIMIT java $EXEC_FILENAME $ARGUMENT <$INPUT_FILE > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
+					timeout $TIME_LIMIT java "$EXEC_FILENAME" $ARGUMENT <$INPUT_FILE > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
 				fi
             fi
         else
             if [ ${#ARGUMENT} -eq 0 ]; then
 				if [ "$CAP_FAST" == "y" ]; then
-					timeout $TIME_LIMIT java $EXEC_FILENAME > $FAST_FILE 2>> $FAST_FILE
+					timeout $TIME_LIMIT java "$EXEC_FILENAME" > $FAST_FILE 2>> $FAST_FILE
 				else
-					timeout $TIME_LIMIT java $EXEC_FILENAME > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
+					timeout $TIME_LIMIT java "$EXEC_FILENAME" > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
 				fi
 
             else
 				if [ "$CAP_FAST" == "y" ]; then
-					timeout $TIME_LIMIT java $EXEC_FILENAME $ARGUMENT > $FAST_FILE 2>> $FAST_FILE
+					timeout $TIME_LIMIT java "$EXEC_FILENAME" $ARGUMENT > $FAST_FILE 2>> $FAST_FILE
 				else
-					timeout $TIME_LIMIT java $EXEC_FILENAME $ARGUMENT > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
+					timeout $TIME_LIMIT java "$EXEC_FILENAME" $ARGUMENT > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
 				fi
 
             fi
@@ -549,18 +605,13 @@ compileAndExecuteAndStyle() {
 #                                                                   #
 #####################################################################
 
-#Sleep for a quick pause.
-# sleep 0.25
-
 #Don't forget to change directory to wherever we are.
 cd "$(dirname "$0")"
 
 # Saving wherever we started; Needed because half this script works on relative position
 EXEC_DIR=$(pwd)
 
-#Setting up for bolding error messages.
-bold=$(tput bold)
-normal=$(tput sgr0)
+DEBUG="false"
 
 if [ $# -eq 0 ]; then
     echo "You must specify a dialog type. Use '-h' or '--help' for details"
@@ -584,12 +635,14 @@ Application Options:
   -q, --quick                   Same as -f option.
   -n, --no-execute              Do not execute java files, just compile them.
   -t, --time-limit              Time limit for programs to execute for.
+  -c, --copy-file               File to copy into each directory.
 "
     exit 0
 fi
 
 CAP_FAST="n"
 NO_EXEC="n"
+COPY_FILE=""
 
 #Since this should never be anything but an integer, let's just declare it.
 #""""types"""" in bash.
@@ -603,6 +656,7 @@ while [ "$#" -gt 0 ]; do
         -i) INPUT_FILE="$2"; shift 2;;
         -a) ARGUMENT="$2"; shift 2;;
         -t) TIME_LIMIT="$2"; shift 2;;
+        -c) COPY_FILE="$2"; shift 2;;
         -q) CAP_FAST="y"; shift 1;;
         -f) CAP_FAST="y"; shift 1;;
         -n) NO_EXEC="y"; shift 1;;
@@ -613,6 +667,7 @@ while [ "$#" -gt 0 ]; do
         --input=*) INPUT_FILE="${1#*=}"; shift 1;;
         --argument=*) ARGUMENT="${1#*=}"; shift 1;;
         --time-limit=*) TIME_LIMIT="${1#*=}"; shift 1;;
+        --copy-file=*) COPY_FILE="${1#*=}"; shift 1;;
         --quick=*) CAP_FAST="y"; shift 1;;
         --fast=*) CAP_FAST="y"; shift 1;;
         --no-execute=*) NO_EXEC="y"; shift 1;;
@@ -624,26 +679,26 @@ while [ "$#" -gt 0 ]; do
 done
 
 #Check if size of java file is 0
-if [ ${#COMP_FILENAME} == 0 ]; then
+if [ "${#COMP_FILENAME}" == 0 ]; then
     error "Lacking Java File Argument."
     error "Exiting program with status 0."
     exit 0
 else
     #Making sure Argument 1 is a java file.  Or has a java extension at least.
-    if  [[ $COMP_FILENAME != *.java ]]; then
+    if  [[ "$COMP_FILENAME" != *.java ]]; then
         error "Java file argument lacks java extension."
         error "Exiting program with status 0."
         exit 0
     fi
 fi
 
-if [ ${#DIRECTORY} == 0 ]; then
+if [ "${#DIRECTORY}" == 0 ]; then
     error "Lacking Directory Argument."
     error "Exiting program with status 0."
     exit 0
 else
     #Making sure argument 2 is a directory.
-    if [ ! -d $DIRECTORY ]; then
+    if [ ! -d "$DIRECTORY" ]; then
         error "Argument 2 is not a directory."
         error "Exiting program with status 0."
         exit 0
@@ -654,42 +709,12 @@ if [ "$TIME_LIMIT" -le "0" ]; then
     error "Timeout limit provided 0, less than 0, or non-integer."
     info "Setting Timeout limit to default 15."
     TIME_LIMIT=15
-    sleep 1
 fi
-
-#Shamelessly stolen from stackoverflow, as per 90% of any production code is.
-# directoryCount=`find $DIRECTORY/* -maxdepth 1 -type d | wc -l`
-# 
-# if [ $directoryCount -eq 0 ]; then
-#     info "Did not detect subdirectories in $DIRECTORY, running RenameScript if it exists."
-#     if [ ! -r "RenameScript.java" ]; then
-#         error "RenameScript.java does not exist."
-#         error "Could not rename files.  Exiting program with status 0"
-#         exit 0
-#     else
-#         #Note to futuer self - make it detected whether to run javac or java only.
-#         if [ ! -f "RenameScript.class" ]; then
-#             javac RenameScript.java
-#         fi
-#         java RenameScript $DIRECTORY
-#     fi
-# else
-#     info "Subdirectories detected in $DIRECTORY, RenameScript will not be executed."
-# fi
-# 
-# if [ -r "FirstLastToUnity.java" ] && [ -r "mapping.txt" ]; then
-#     info "Running UnityID Mapper."
-#     if [ ! -f "FirstLastToUnity.class" ]; then
-#         javac FirstLastToUnity.java
-#     fi
-#     java FirstLastToUnity $DIRECTORY
-#     sleep 1
-# fi
 
 HAVE_OUTPUT=false
 HAVE_INPUT=false
 
-if [ ${#EXPECTED_FILE} != 0 ]; then
+if [ "${#EXPECTED_FILE}" != 0 ]; then
     EXPECTED_FILE="$EXEC_DIR"/$EXPECTED_FILE
     if [ ! -r $EXPECTED_FILE ]; then
         error "Expected output file does not exist."
@@ -700,7 +725,7 @@ if [ ${#EXPECTED_FILE} != 0 ]; then
     fi
 
     #We can only have an input file if we have an output file.
-    if [ ${#INPUT_FILE} != 0 ]; then
+    if [ "${#INPUT_FILE}" != 0 ]; then
         INPUT_FILE="$EXEC_DIR"/$INPUT_FILE
         if [ ! -r $EXPECTED_FILE ]; then
             error "Input file does not exist."
@@ -723,7 +748,7 @@ FILE_COUNT="$(ls -1 "$EXEC_DIR"/$DIRECTORY | wc -l)"
 
 #echo $FILE_COUNT
 
-if [ $FILE_COUNT -eq "1" ]; then
+if [ "$FILE_COUNT" -eq "1" ]; then
     # echo "Pretty sure that's an archive in there boss."
 	info "Possible archive found in $DIRECTORY"
     for file in "$EXEC_DIR"/"$DIRECTORY"/*; do
@@ -740,27 +765,20 @@ if [ $FILE_COUNT -eq "1" ]; then
     done
 fi
 
-# sleep 1
-# clear
-
 #The working loop.  Loops through each directory in the supplied directory,
 #And runs the compilation function on it, with the filename argument.
 for d in *; do
     #check if * is a directory, not a file
     if [ -d "${d}" ]; then
         cd "${d}"
-        if [ -r $COMP_FILENAME ]; then
+        if [ -r "$COMP_FILENAME" ]; then
             #clear
             info "Current working directory: ${d}"
+			if [[ "$COPY_FILE" != "" ]]; then
+				copyFile ./ "$EXEC_DIR"/"$COPY_FILE"
+			fi
 			compileAndExecuteAndStyle
-			report "${d}"
-			# if [ -f "$EXEC_DIR"/"ReportGenerator.sh" ]; then
-			# 	info "--------------------------------------------------"
-			# 	info "Generating Report based on output files."
-			# 	bash "$EXEC_DIR"/"ReportGenerator.sh" ./
-			# 	echo $(pwd) >> "Report.txt"
-			# fi
-            sleep 1
+			report ./
         else
             error "File does not exist"
         fi
