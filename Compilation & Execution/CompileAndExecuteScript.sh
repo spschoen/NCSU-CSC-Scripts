@@ -571,29 +571,28 @@ compileAndExecuteAndStyle() {
 		info "This program assumes your style checker exists in ~/cs/."
 
 		if [ ! -d ~/cs/ ]; then
-			error "Could not find checkstyle in ~/cs/.  Please install Checkstyle to ~/cs/"
-			error "Exiting program with status 5"
-			exit 5
-		fi
+        	error "Could not find checkstyle in ~/cs/.  Please install Checkstyle to ~/cs/"
+        else
+            echo $COMP_FILENAME_WITHOUT_JAVA > $STYLE_FILE
+            ~/cs/checkstyle $COMP_FILENAME > $STYLE_FILE 2> $STYLE_ERROR_FILE
+    
+            if [ $(stat -c%s $STYLE_ERROR_FILE) -gt 0 ]; then
+                error "Errors occured while checking style.  Details in $STYLE_ERROR_FILE"
+            fi
+    
+            #This is some funky math.
+            #So, the amount of bytes written by checkstyle is 199 + name of file -.java
+            #So we check for size of file > (199 + length of program name)
+            #If greater, we have style errors.  If not, it's equal and we're good to go.
+            STYLE_FILESIZE=$(stat -c%s $STYLE_FILE)
+            COMP_FILENAME_WITHOUT_JAVA=${COMP_FILENAME%.java}
 
-		echo $COMP_FILENAME_WITHOUT_JAVA > $STYLE_FILE
-		~/cs/checkstyle $COMP_FILENAME > $STYLE_FILE 2> $STYLE_ERROR_FILE
-
-		if [ $(stat -c%s $STYLE_ERROR_FILE) -gt 0 ]; then
-			error "Errors occured while checking style.  Details in $STYLE_ERROR_FILE"
-		fi
-
-		#This is some funky math.
-		#So, the amount of bytes written by checkstyle is 199 + name of file -.java
-		#So we check for size of file > (199 + length of program name)
-		#If greater, we have style errors.  If not, it's equal and we're good to go.
-		STYLE_FILESIZE=$(stat -c%s $STYLE_FILE)
-		COMP_FILENAME_WITHOUT_JAVA=${COMP_FILENAME%.java}
-
-		if [ "$STYLE_FILESIZE" -gt $(( 199 + ${#COMP_FILENAME_WITHOUT_JAVA} )) ]; then
-			info "Style errors detected.  ;-;"
-		else
-			info "No style errors detected.  Great!"
+            if [ "$STYLE_FILESIZE" -gt $(( 199 + ${#COMP_FILENAME_WITHOUT_JAVA} )) ]; then
+                info "Style errors detected.  ;-;"
+            else
+                 info "No style errors detected.  Great!"
+            fi
+    
 		fi
 	fi
 
