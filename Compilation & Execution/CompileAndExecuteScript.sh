@@ -566,7 +566,7 @@ compileAndExecuteAndStyle() {
         info "--------------------------------------------------"
     fi
 
-	if [ "$CAP_FAST" != "y" ]; then
+	if [ "$CAP_FAST" != "y" ] && [ "$CHECK" == "y" ]; then
 		info "Automated Style Checker executing."
 		info "This program assumes your style checker exists in ~/cs/."
 
@@ -617,7 +617,7 @@ if [ $# -eq 0 ]; then
     exit 0
 fi
 
-if [ $1 == "-h" ] || [ $1 == "--help" ] || [ $1 == "--h" ] || [ $1 == "-help" ]; then
+if [ $1 == "-h" ] || [ $1 == "--help" ]; then
     echo "Usage:
 sh CompileAndExecuteScript.sh [OPTION...]
 
@@ -635,12 +635,14 @@ Application Options:
   -n, --no-execute              Do not execute java files, just compile them.
   -t, --time-limit              Time limit for programs to execute for.
   -c, --copy-file               File to copy into each directory.
+  -ncs, --no-check              Do not run the checkstyle program.
 "
     exit 0
 fi
 
 CAP_FAST="n"
 NO_EXEC="n"
+CHECK="y"
 COPY_FILE=""
 
 #Since this should never be anything but an integer, let's just declare it.
@@ -659,6 +661,7 @@ while [ "$#" -gt 0 ]; do
         -q) CAP_FAST="y"; shift 1;;
         -f) CAP_FAST="y"; shift 1;;
         -n) NO_EXEC="y"; shift 1;;
+        -ncs) CHECK="n"; shift 1;;
 
         --program=*) COMP_FILENAME="${1#*=}"; shift 1;;
         --dir=*) DIRECTORY="${1#*=}"; shift 1;;
@@ -667,9 +670,10 @@ while [ "$#" -gt 0 ]; do
         --argument=*) ARGUMENT="${1#*=}"; shift 1;;
         --time-limit=*) TIME_LIMIT="${1#*=}"; shift 1;;
         --copy-file=*) COPY_FILE="${1#*=}"; shift 1;;
-        --quick=*) CAP_FAST="y"; shift 1;;
-        --fast=*) CAP_FAST="y"; shift 1;;
-        --no-execute=*) NO_EXEC="y"; shift 1;;
+        --quick*) CAP_FAST="y"; shift 1;;
+        --fast*) CAP_FAST="y"; shift 1;;
+        --no-execute*) NO_EXEC="y"; shift 1;;
+        --no-check*) CHECK="n"; shift 1;;
         --program|--dir|--expected|--input) echo "$1 requires an argument" >&2; exit 1;;
 
         -*) echo "unknown option: $1" >&2; exit 1;;
