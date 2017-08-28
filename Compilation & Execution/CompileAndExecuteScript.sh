@@ -139,6 +139,10 @@
 #                       Fixed a bug where the script failed to      #
 #                       execute any java programs.  /shrug          #
 #                                                                   #
+#   v1.6.3 - 17/08/27 - Checkstyle is no longer required to run     #
+#                       and the script won't exit if it doesn't     #
+#                       exist at ~/cs/.  Added no-checkstyle        #
+#                       options.  -ncs / --no-check                 #
 #                                                                   #
 #####################################################################
 
