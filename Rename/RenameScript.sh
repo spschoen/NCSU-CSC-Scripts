@@ -47,6 +47,38 @@ fi
 
 cd "$DIRECTORY"
 
+for D in *; do
+    if [ ! -d "${D}" ]; then
+        LASTNAME=$(echo ${D} | cut -d' ' -s -f1)
+        LASTNAME=$(echo $LASTNAME | rev | cut -d'-' -s -f1 | rev)
+        
+        FIRSTNAME=$(echo ${D} | cut -d' ' -s -f2)
+        FIRSTNAME=$(echo $FIRSTNAME | cut -d'_' -s -f1)
+        
+        FILE=$(echo ${D} | rev | cut -d'_' -s -f1 | rev)
+        # FILE=$(echo $FILE | cut -d'_' -s -f1)
+        # echo $FILE
+        
+        if [ ! -d "$FIRSTNAME""_""$LASTNAME" ]; then
+            mkdir "$FIRSTNAME""_""$LASTNAME"
+        fi
+        if [[ "${D}" == *".html" ]]; then
+            # echo "tesT"
+		    FILESIZE=$(stat -c%s "${D}")
+		    # echo "$FILESIZE"
+		    if [[ "$FILESIZE" == "76" ]] && [[ "${D}" == *".html" ]]; then
+			    # warning "Detected Moodle downloaded HTML comment with no comment - deleting."
+			    rm -f "${D}"
+		    fi
+        fi
+        if [ -f "${D}" ]; then
+            mv "${D}" "$FIRSTNAME""_""$LASTNAME"/"$FILE"
+        fi
+    fi
+done
+
+exit
+
 if [[ "$directoryCount" != "0" ]]; then
 	info "--------------------------------------------------"
 	for D in *; do
