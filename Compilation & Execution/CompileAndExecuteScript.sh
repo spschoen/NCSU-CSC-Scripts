@@ -144,6 +144,9 @@
 #                       exist at ~/cs/.  Added no-checkstyle        #
 #                       options.  -ncs / --no-check                 #
 #                                                                   #
+#   v1.6.4 - 17/08/29 - Fixed Rename not working because Noodle is  #
+#                       pure, unfiltered trash in software form.    #
+#                                                                   #
 #####################################################################
 
 #####################################################################
@@ -183,91 +186,87 @@ debug()   { if [[ "$DEBUG" == "true" ]]; then
 
 rename() {
 
-	if [ $# -eq 0 ]; then
-		fatal "Rename: You must specify a directory argument." # Use '-h' or '--help' for details"
-	fi
+	#Check if user supplied arguments
+    if [ $# -eq 0 ]; then
+        fatal "You must specify a directory argument." # Use '-h' or '--help' for details"
+    fi
 
-	if [ ! -d $1 ]; then
-		fatal "Rename: Argument 1 is not a directory, or directory does not exist."
-	fi
+    if [ ! -d $1 ]; then
+        fatal "ERR: Argument 1 is not a directory, or directory does not exist."
+    fi
 
-	rm -f *.log
+    rm -f *.log
 
-	#Saving argument 1.
-	DIRECTORY="$1"
-	# echo "$DIRECTORY"
+    #Saving argument 1.
+    DIRECTORY="$1"
 
-	directoryCount=$(find "$DIRECTORY"/* -maxdepth 1 -type d | wc -l)
+    directoryCount=$(find "$DIRECTORY"/* -maxdepth 1 -type d | wc -l)
 
-	if [[ "$directoryCount" == "0" ]]; then
-		info "Did not detect subdirectories in ""$DIRECTORY"
-	else
-		info "Detected subdirectories in ""$DIRECTORY"
-	fi
+    if [[ "$directoryCount" == "0" ]]; then
+        info "Did not detect subdirectories in ""$DIRECTORY"
+    else
+        info "Detected subdirectories in ""$DIRECTORY"
+    fi
 
-	cd "$DIRECTORY"
+    cd "$DIRECTORY"
 
-	if [[ "$directoryCount" != "0" ]]; then
-		info "--------------------------------------------------"
-		for D in *; do
-			if [ -d "${D}" ]; then
-				if [[ "${D}" == *" "* ]]; then
-					DIR_NAME="${D// /_}"
-					info "Renaming ${D} to $DIR_NAME"
-					mv "${D}" "$DIR_NAME"
-					cd "$DIR_NAME"
-				else
-					info "Did not need to rename ""${D}"
-					cd "${D}"
-				fi
-				DIR_NAME="$(pwd)"
-				DIR_NAME="${DIR_NAME%*/}"
-				info "Currently working in: ""$DIR_NAME"
-				
-				for F in *; do
-				    if [[ "${F}" != "output"*".txt" ]]; then
-				        if [[ "${F}" == *"_"* ]]; then
-						    FIL_NAME="${F##*_}"
-						    info "Renaming ${F} to $FIL_NAME"
-						    mv "${F}" "$FIL_NAME"
-						else
-							FIL_NAME="${F}"
-							info "Did not need to rename ""${F}"
-					    fi
-					    # info "File: ""${F}"
-					
-					    FILESIZE=$(stat -c%s "${FIL_NAME}")
-					    if [[ "$FILESIZE" == "76" ]] && [[ "$FIL_NAME" == *".html" ]]; then
-						    warning "Detected Moodle downloaded HTML comment with no comment - deleting."
-						    rm -f "$FILESIZE"
-					    fi
-				    fi
-				done
-				
-				info "--------------------------------------------------"
-				cd ..
-			fi
-		done
-	else
-		info "--------------------------------------------------"
-		for F in *; do
-			if [ -f "${F}" ] && [ ! -d "${F}" ]; then
-				STUDENT_NAME="${F%%_*}"
-				STUDENT_NAME="${STUDENT_NAME// /_}"
-				FILE_NAME="${F##*_}"
-				# info "Original Name: ""${F}"
-				# info "Student Name : ""$STUDENT_NAME"
-				# info "File Name    : ""$FILE_NAME"
-				if [ ! -d "$STUDENT_NAME" ]; then
-					info "Did not detect directory ""$STUDENT_NAME"", creating now."
-					mkdir "$STUDENT_NAME"
-				fi
-				info "Moving ""${F}"" to ""$STUDENT_NAME""/""$FILE_NAME"
-				mv "${F}" "$STUDENT_NAME"/"$FILE_NAME"
-			fi
-			info "--------------------------------------------------"
-		done
-	fi
+    if [[ "$directoryCount" != "0" ]]; then
+        info "--------------------------------------------------"
+        for D in *; do
+            if [ -d "${D}" ] && [[ "${D}" == *"assignsubmission"* ]]; then
+                LASTNAME=$(echo ${D} | cut -d' ' -s -f1)
+                LASTNAME=$(echo $LASTNAME | rev | cut -d'-' -s -f1 | rev)
+                
+                FIRSTNAME=$(echo ${D} | cut -d' ' -s -f2)
+                FIRSTNAME=$(echo $FIRSTNAME | cut -d'_' -s -f1)
+                
+                # info "Original Name: ""${D}"
+                # info "Student Name : ""$FIRSTNAME"" ""$LASTNAME"
+                
+                if [ ! -d "$FIRSTNAME""_""$LASTNAME" ]; then
+                    mv "${D}" "$FIRSTNAME""_""$LASTNAME"
+                else
+                    mv "${D}"/* "$FIRSTNAME""_""$LASTNAME"
+                    rm -rf "${D}"
+                fi
+            fi
+        done
+        info "Deleting HTML files of size 76 (blank from Noodle)"
+        find . -name '*.html' -size 76c -delete
+    else
+        info "--------------------------------------------------"
+        info "Deleting HTML files of size 76 (blank from Noodle)"
+        find . -name '*.html' -size 76c -delete
+        for D in *; do
+            if [ ! -d "${D}" ]; then
+                LASTNAME=$(echo ${D} | cut -d' ' -s -f1)
+                LASTNAME=$(echo $LASTNAME | rev | cut -d'-' -s -f1 | rev)
+                
+                FIRSTNAME=$(echo ${D} | cut -d' ' -s -f2)
+                FIRSTNAME=$(echo $FIRSTNAME | cut -d'_' -s -f1)
+                
+                FILE=$(echo ${D} | rev | cut -d'_' -s -f1 | rev)
+                
+                info "Original Name: ""${D}"
+                info "Student Name : ""$FIRSTNAME"" ""$LASTNAME"
+                info "File Name    : ""$FILE"
+                
+                if [ ! -d "$FIRSTNAME""_""$LASTNAME" ]; then
+                    mkdir "$FIRSTNAME""_""$LASTNAME"
+                fi
+                if [[ "${D}" == *".html" ]]; then
+                    FILESIZE=$(stat -c%s "${D}")
+                    if [[ "$FILESIZE" == "76" ]] && [[ "${D}" == *".html" ]]; then
+                        warning "Detected Moodle downloaded HTML comment with no comment - deleting."
+                        rm -f "${D}"
+                    fi
+                fi
+                if [ -f "${D}" ]; then
+                    mv "${D}" "$FIRSTNAME""_""$LASTNAME"/"$FILE"
+                fi
+            fi
+        done
+    fi
 	
 	cd "$EXEC_DIR"
 	
