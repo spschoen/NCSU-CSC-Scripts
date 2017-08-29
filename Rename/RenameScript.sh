@@ -47,91 +47,62 @@ fi
 
 cd "$DIRECTORY"
 
-for D in *; do
-    if [ ! -d "${D}" ]; then
-        LASTNAME=$(echo ${D} | cut -d' ' -s -f1)
-        LASTNAME=$(echo $LASTNAME | rev | cut -d'-' -s -f1 | rev)
-        
-        FIRSTNAME=$(echo ${D} | cut -d' ' -s -f2)
-        FIRSTNAME=$(echo $FIRSTNAME | cut -d'_' -s -f1)
-        
-        FILE=$(echo ${D} | rev | cut -d'_' -s -f1 | rev)
-        # FILE=$(echo $FILE | cut -d'_' -s -f1)
-        # echo $FILE
-        
-        if [ ! -d "$FIRSTNAME""_""$LASTNAME" ]; then
-            mkdir "$FIRSTNAME""_""$LASTNAME"
-        fi
-        if [[ "${D}" == *".html" ]]; then
-            # echo "tesT"
-		    FILESIZE=$(stat -c%s "${D}")
-		    # echo "$FILESIZE"
-		    if [[ "$FILESIZE" == "76" ]] && [[ "${D}" == *".html" ]]; then
-			    # warning "Detected Moodle downloaded HTML comment with no comment - deleting."
-			    rm -f "${D}"
-		    fi
-        fi
-        if [ -f "${D}" ]; then
-            mv "${D}" "$FIRSTNAME""_""$LASTNAME"/"$FILE"
-        fi
-    fi
-done
-
-exit
-
 if [[ "$directoryCount" != "0" ]]; then
 	info "--------------------------------------------------"
 	for D in *; do
-		if [ -d "${D}" ]; then
-			if [[ "${D}" == *" "* ]]; then
-				DIR_NAME="${D// /_}"
-				info "Renaming ${D} to $DIR_NAME"
-				mv "${D}" "$DIR_NAME"
-				cd "$DIR_NAME"
-			else
-				cd "${D}"
-			fi
-			info "Currently working in: $(pwd)"
-			
-			for F in *; do
-				if [[ "${F}" == *"_"* ]]; then
-					FIL_NAME="${F##*_}"
-					info "Renaming ${F} to $FIL_NAME"
-					mv "${F}" "$FIL_NAME"
-				fi
-				# info "File: ""${F}"
-				
-				FILESIZE=$(stat -c%s "${FIL_NAME}")
-				if [[ "$FILESIZE" == "76" ]] && [[ "${F}" == *".html" ]]; then
-					warning "Detected Moodle downloaded HTML comment with no comment - deleting."
-					rm -f "$FILESIZE"
-				fi
-				
-			done
-			
-			info "--------------------------------------------------"
-			cd ..
-		fi
-	done
+        if [ -d "${D}" ] && [[ "${D}" == *"assignsubmission"* ]]; then
+            LASTNAME=$(echo ${D} | cut -d' ' -s -f1)
+            LASTNAME=$(echo $LASTNAME | rev | cut -d'-' -s -f1 | rev)
+            
+            FIRSTNAME=$(echo ${D} | cut -d' ' -s -f2)
+            FIRSTNAME=$(echo $FIRSTNAME | cut -d'_' -s -f1)
+            
+            # info "Original Name: ""${D}"
+            # info "Student Name : ""$FIRSTNAME"" ""$LASTNAME"
+            
+            if [ ! -d "$FIRSTNAME""_""$LASTNAME" ]; then
+                mv "${D}" "$FIRSTNAME""_""$LASTNAME"
+            else
+                mv "${D}"/* "$FIRSTNAME""_""$LASTNAME"
+                rm -rf "${D}"
+            fi
+        fi
+    done
+    info "Deleting HTML files of size 76 (blank from Noodle)"
+    find . -name '*.html' -size 76c -delete
 else
 	info "--------------------------------------------------"
-	for F in *; do
-		if [ -f "${F}" ] && [ ! -d "${F}" ]; then
-			STUDENT_NAME="${F%%_*}"
-			STUDENT_NAME="${STUDENT_NAME// /_}"
-			FILE_NAME="${F##*_}"
-			# info "Original Name: ""${F}"
-			# info "Student Name : ""$STUDENT_NAME"
-			# info "File Name    : ""$FILE_NAME"
-			if [ ! -d "$STUDENT_NAME" ]; then
-				info "Did not detect directory ""$STUDENT_NAME"", creating now."
-				mkdir "$STUDENT_NAME"
-			fi
-			info "Moving ""${F}"" to ""$STUDENT_NAME""/""$FILE_NAME"
-			mv "${F}" "$STUDENT_NAME"/"$FILE_NAME"
-		fi
-		info "--------------------------------------------------"
-	done
+    info "Deleting HTML files of size 76 (blank from Noodle)"
+    find . -name '*.html' -size 76c -delete
+    for D in *; do
+        if [ ! -d "${D}" ]; then
+            LASTNAME=$(echo ${D} | cut -d' ' -s -f1)
+            LASTNAME=$(echo $LASTNAME | rev | cut -d'-' -s -f1 | rev)
+            
+            FIRSTNAME=$(echo ${D} | cut -d' ' -s -f2)
+            FIRSTNAME=$(echo $FIRSTNAME | cut -d'_' -s -f1)
+            
+            FILE=$(echo ${D} | rev | cut -d'_' -s -f1 | rev)
+            
+			info "Original Name: ""${D}"
+			info "Student Name : ""$FIRSTNAME"" ""$LASTNAME"
+			info "File Name    : ""$FILE"
+            
+            if [ ! -d "$FIRSTNAME""_""$LASTNAME" ]; then
+                mkdir "$FIRSTNAME""_""$LASTNAME"
+            fi
+            if [[ "${D}" == *".html" ]]; then
+                FILESIZE=$(stat -c%s "${D}")
+                if [[ "$FILESIZE" == "76" ]] && [[ "${D}" == *".html" ]]; then
+                    warning "Detected Moodle downloaded HTML comment with no comment - deleting."
+                    rm -f "${D}"
+                fi
+            fi
+            if [ -f "${D}" ]; then
+                mv "${D}" "$FIRSTNAME""_""$LASTNAME"/"$FILE"
+            fi
+        fi
+    done
 fi
 
 
