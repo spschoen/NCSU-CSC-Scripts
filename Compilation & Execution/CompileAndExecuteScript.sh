@@ -777,16 +777,16 @@ for d in *; do
     #check if * is a directory, not a file
     if [ -d "${d}" ]; then
         cd "${d}"
+        info "Current working directory: ${d}"
         if [ -r "$COMP_FILENAME" ]; then
             #clear
-            info "Current working directory: ${d}"
 			if [[ "$COPY_FILE" != "" ]]; then
 				copyFile ./ "$EXEC_DIR"/"$COPY_FILE"
 			fi
 			compileAndExecuteAndStyle
 			report ./
         else
-            error "File does not exist"
+            error "File ""$COMP_FILENAME"" does not exist"
         fi
         cd ..
 		info "--------------------------------------------------------"
