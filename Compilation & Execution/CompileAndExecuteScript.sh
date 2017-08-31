@@ -188,25 +188,28 @@ rename() {
 
 	#Check if user supplied arguments
     if [ $# -eq 0 ]; then
-        fatal "You must specify a directory argument." # Use '-h' or '--help' for details"
+        error "Rename: directory argument not supplied."
+        return 21
     fi
 
     if [ ! -d $1 ]; then
-        fatal "ERR: Argument 1 is not a directory, or directory does not exist."
+        error "Rename: supplied argument is not a directory/does not exist."
+        return 22
     fi
 
-    rm -f *.log
+    # rm -f *.log
 
     #Saving argument 1.
     DIRECTORY="$1"
 
     directoryCount=$(find "$DIRECTORY"/* -maxdepth 1 -type d | wc -l)
 
-    if [[ "$directoryCount" == "0" ]]; then
-        info "Did not detect subdirectories in ""$DIRECTORY"
-    else
-        info "Detected subdirectories in ""$DIRECTORY"
-    fi
+    # TODO: Put this into a "debug" option
+    # if [[ "$directoryCount" == "0" ]]; then
+    #     info "Did not detect subdirectories in ""$DIRECTORY"
+    # else
+    #     info "Detected subdirectories in ""$DIRECTORY"
+    # fi
 
     cd "$DIRECTORY"
 
@@ -223,6 +226,7 @@ rename() {
                 # info "Original Name: ""${D}"
                 # info "Student Name : ""$FIRSTNAME"" ""$LASTNAME"
                 
+                info "Rename: Moving ""${D}"" to ""$FIRSTNAME""_""$LASTNAME""/"
                 if [ ! -d "$FIRSTNAME""_""$LASTNAME" ]; then
                     mv "${D}" "$FIRSTNAME""_""$LASTNAME"
                 else
@@ -231,12 +235,8 @@ rename() {
                 fi
             fi
         done
-        info "Deleting HTML files of size 76 (blank from Noodle)"
-        find . -name '*.html' -size 76c -delete
     else
         info "--------------------------------------------------"
-        info "Deleting HTML files of size 76 (blank from Noodle)"
-        find . -name '*.html' -size 76c -delete
         for D in *; do
             if [ ! -d "${D}" ]; then
                 LASTNAME=$(echo ${D} | cut -d' ' -s -f1)
@@ -247,26 +247,23 @@ rename() {
                 
                 FILE=$(echo ${D} | rev | cut -d'_' -s -f1 | rev)
                 
-                info "Original Name: ""${D}"
-                info "Student Name : ""$FIRSTNAME"" ""$LASTNAME"
-                info "File Name    : ""$FILE"
+                # info "Original Name: ""${D}"
+                # info "Student Name : ""$FIRSTNAME"" ""$LASTNAME"
+                # info "File Name    : ""$FILE"
                 
                 if [ ! -d "$FIRSTNAME""_""$LASTNAME" ]; then
                     mkdir "$FIRSTNAME""_""$LASTNAME"
                 fi
-                if [[ "${D}" == *".html" ]]; then
-                    FILESIZE=$(stat -c%s "${D}")
-                    if [[ "$FILESIZE" == "76" ]] && [[ "${D}" == *".html" ]]; then
-                        warning "Detected Moodle downloaded HTML comment with no comment - deleting."
-                        rm -f "${D}"
-                    fi
-                fi
+                info "Rename: Moving ""${D}"" to ""$FIRSTNAME""_""$LASTNAME""/"
                 if [ -f "${D}" ]; then
                     mv "${D}" "$FIRSTNAME""_""$LASTNAME"/"$FILE"
                 fi
             fi
         done
     fi
+    info "Deleting HTML files of size 76 (blank from Noodle)"
+    find . -name '*.html' -size 76c -delete
+    info "--------------------------------------------------"
 	
 	cd "$EXEC_DIR"
 	
