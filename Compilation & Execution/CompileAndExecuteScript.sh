@@ -15,7 +15,11 @@
 # Optional Arguments: -e expected output file for comparison        #
 #                     -i input file for stdin                       #
 #                     -f/-q for fast script w/ less information     #
-#                     -n to not execute file, just compile.         #
+#                     -n to not execute a file, just compile it.    #
+#                     -t to set custom timeout limit.               #
+#                     -c to copy a file to each directory.          #
+#                     -ncs to disable use of checkstyle.            #
+#                     -t to set custom timeout limit.               #
 #                     -t to set custom timeout limit.               #
 #                                                                   #
 # Use: sh CompileAndExecuteScript -p file.java -d dir/ [optionals]  #
@@ -23,10 +27,6 @@
 # Note: This program optionally expects an expected file AND        #
 #   an input file, or just an expected file.  It will not work      #
 #   with only an input file.                                        #
-#                                                                   #
-# Note: This script benefits greatly from GenerateReport.sh         #
-#   (another of my scripts) by summarizing the six (!) output files #
-#   from compilation, execution, and style checking.                #
 #                                                                   #
 # Note: This script will run slow at first launch, especially if    #
 #   you haven't already run javac in the current session.  That's   #
@@ -68,7 +68,6 @@
 # Expected file/directory structure (before script):                #
 # Directory                                                         #
 #  -- CompileAndExecuteScript.sh                                    #
-#  -- GenerateReport.java                                           #
 #  -- Assignment Directory                                          #
 #      -- Student_Numbers_assignmsubmission_file_JavaProgram.java   #
 #      -- Student_Numbers_assignmsubmission_file_JavaProgram.java   #
@@ -81,17 +80,10 @@
 # Expected file/directory structure (after script):                 #
 # Directory                                                         #
 #  -- CompileAndExecuteScript.sh                                    #
-#  -- GenerateReport.java                                           #
 #  -- Assignment Directory                                          #
 #      -- Student 1 Directory (UnityID if FirstLastToUnity is used) #
 #          -- JavaProgram.java                                      #
 #          -- JavaProgram.class                                     #
-#          -- output_compile.txt                                    #
-#          -- output_compile_error.txt                              #
-#          -- output_execute.txt                                    #
-#          -- output_execute_error.txt                              #
-#          -- output_style.txt                                      #
-#          -- output_style_error.txt                                #
 #          -- Report.txt                                            #
 #      -- Student 2 Directory (UnityID if FirstLastToUnity is used) #
 #      -- ...                                                       #
@@ -147,6 +139,9 @@
 #   v1.6.4 - 17/08/29 - Fixed Rename not working because Noodle is  #
 #                       pure, unfiltered trash in software form.    #
 #                                                                   #
+#   v1.6.5 - 17/09/01 - Rename confirmed working.  Updated the      #
+#                       documentation, and cleaned up output.       #
+#                                                                   #
 #####################################################################
 
 #####################################################################
@@ -178,15 +173,13 @@ info()    { echo "[INFO]    $@" | tee -a "$LOG_FILE" >&2 ; }
 warning() { echo "[WARNING] $@" | tee -a "$LOG_FILE" >&2 ; }
 error()   { echo "[ERROR]   $@" | tee -a "$LOG_FILE" >&2 ; }
 fatal()   { echo "[FATAL]   $@" | tee -a "$LOG_FILE" >&2 ; exit 1 ; }
-debug()   { if [[ "$DEBUG" == "true" ]]; then 
-			echo "[DEBUG]   $@" | tee -a "$LOG_FILE" >&2
-			fi ; }
+debug()   { if [[ "$DEBUG" == "true" ]]; then echo "[DEBUG]   $@" | tee -a "$LOG_FILE" >&2; fi ; }
 
 # End of global area.
 
 rename() {
 
-	#Check if user supplied arguments
+    #Check if user supplied arguments
     if [ $# -eq 0 ]; then
         error "Rename: directory argument not supplied."
         return 21
@@ -204,12 +197,11 @@ rename() {
 
     directoryCount=$(find "$DIRECTORY"/* -maxdepth 1 -type d | wc -l)
 
-    # TODO: Put this into a "debug" option
-    # if [[ "$directoryCount" == "0" ]]; then
-    #     info "Did not detect subdirectories in ""$DIRECTORY"
-    # else
-    #     info "Detected subdirectories in ""$DIRECTORY"
-    # fi
+    if [[ "$directoryCount" == "0" ]]; then
+        debug "[NORMAL]: Did not detect subdirectories in ""$DIRECTORY"
+    else
+        debug "[NORMAL]: Detected subdirectories in ""$DIRECTORY"
+    fi
 
     cd "$DIRECTORY"
 
@@ -223,10 +215,10 @@ rename() {
                 FIRSTNAME=$(echo ${D} | cut -d' ' -s -f2)
                 FIRSTNAME=$(echo $FIRSTNAME | cut -d'_' -s -f1)
                 
-                # info "Original Name: ""${D}"
-                # info "Student Name : ""$FIRSTNAME"" ""$LASTNAME"
+                debug "[NORMAL]: Original Name: ""${D}"
+                debug "[NORMAL]: Student Name : ""$FIRSTNAME"" ""$LASTNAME"
                 
-                info "Rename: Moving ""${D}"" to ""$FIRSTNAME""_""$LASTNAME""/"
+                debug "[NORMAL]: Rename: Moving ""${D}"" to ""$FIRSTNAME""_""$LASTNAME""/"
                 if [ ! -d "$FIRSTNAME""_""$LASTNAME" ]; then
                     mv "${D}" "$FIRSTNAME""_""$LASTNAME"
                 else
@@ -247,9 +239,9 @@ rename() {
                 
                 FILE=$(echo ${D} | rev | cut -d'_' -s -f1 | rev)
                 
-                # info "Original Name: ""${D}"
-                # info "Student Name : ""$FIRSTNAME"" ""$LASTNAME"
-                # info "File Name    : ""$FILE"
+                debug "[NORMAL]: Original Name: ""${D}"
+                debug "[NORMAL]: Student Name : ""$FIRSTNAME"" ""$LASTNAME"
+                debug "[NORMAL]: File Name    : ""$FILE"
                 
                 if [ ! -d "$FIRSTNAME""_""$LASTNAME" ]; then
                     mkdir "$FIRSTNAME""_""$LASTNAME"
@@ -261,26 +253,25 @@ rename() {
             fi
         done
     fi
-    info "Deleting HTML files of size 76 (blank from Noodle)"
+    debug "[NORMAL]: Deleting HTML files of size 76 (blank from Noodle)"
     find . -name '*.html' -size 76c -delete
-    info "--------------------------------------------------"
-	
-	cd "$EXEC_DIR"
-	
+    debug "--------------------------------------------------"
+    
+    cd "$EXEC_DIR"
+    
 }
 
 report() {
 
-	DIR_NAME="$(pwd)"
-	DIR_NAME="${DIR_NAME%*/}"
-
-	info "--------------------------------------------------"
-	info "Running report for $DIR_NAME"
-	
-	if [ -f "Report.txt" ]; then
-		debug "Removing previous report."
-		rm -f "Report.txt"
-	fi
+    # DIR_NAME=$(echo $(pwd) | cut -d' ' -s -f1)
+    DIR_NAME=$(echo $(pwd) | rev | cut -d'/' -s -f1 | rev)
+    
+    info "Running report for $DIR_NAME"
+    
+    if [ -f "Report.txt" ]; then
+        debug "[NORMAL]: Removing previous report."
+        rm -f "Report.txt"
+    fi
 
     TabLines=0
     IncInden=0
@@ -298,15 +289,15 @@ report() {
     uknownError=0
 
     for F in *; do
-		debug "${F}"
+        debug "[NORMAL]: ${F}"
         if [[ "${F}" == "output_"*".txt" ]]; then
             FILE_NAME="${F}"
             FILE_NAME="${FILE_NAME##/*/}"
-			debug "$FILE_NAME"
+            debug "[NORMAL]: $FILE_NAME"
             printf "%s\n" "--------------------------------------------------" >> Report.txt
             printf "$FILE_NAME\n" >> Report.txt
             if [[ "$FILE_NAME" == "output_style.txt" ]]; then
-				debug "Working in output_style parsing."
+                debug "Working in output_style parsing."
                 #Saving IFS
                 old=$IFS
                 IFS=$'\n'
@@ -366,212 +357,200 @@ report() {
             
                 #cat "$FILE_NAME" | grep $DIR >> Report.txt
             elif [[ "$FILE_NAME" == output*.txt ]]; then
-				debug "Catting ""$FILE_NAME"" to Report."
+                debug "[NORMAL]: Catting ""$FILE_NAME"" to Report."
                 cat "$FILE_NAME" >> Report.txt
             fi
         fi
     done
-	
-	rm -f "output_"*".txt"
+    
+    rm -f "output_"*".txt"
 
 }
 
 copyFile() {
 
-	if [ $# -ne 2 ]; then
-		error "Not given expected arguments."
-		fatal "Expected [directory of directories to distribute file to] [file to distribute]"
-	fi
+    if [ $# -ne 2 ]; then
+        error "copyFile: Not given expected arguments."
+        return 31
+    fi
 
-	if [ ! -d $1 ]; then
-		error "Argument 1 is not a directory, or directory does not exist."
-		fatal "Exiting program with status 0."
-	fi
+    if [ ! -d $1 ]; then
+        error "copyFile: Argument 1 is not a directory, or directory does not exist."
+        return 32
+    fi
 
-	#Saving argument 1.
-	DIRECTORY="$1"
+    #Saving argument 1.
+    DIRECTORY="$1"
 
-	#Making sure argument 2 is a file.
-	if [ ! -f $2 ]; then
-		error "Argument 2 is not a file, or does not exist."
-		fatal "Exiting program with status 0."
-		exit 0
-	fi
-	
-	cp "$2" "$DIRECTORY"
+    #Making sure argument 2 is a file.
+    if [ ! -f $2 ]; then
+        error "copyFile: Argument 2 is not a file, or does not exist."
+        return 33
+    fi
+    
+    cp "$2" "$DIRECTORY"
 
 }
 
 compileAndExecuteAndStyle() {
 
-	# if [ "$CAP_FAST" == "y" ]; then
+    # if [ "$CAP_FAST" == "y" ]; then
     # 
-	# else
+    # else
     # 
-	# fi
+    # fi
 
-	if [ "$CAP_FAST" == "y" ]; then
-		if [ ! -f $COMP_FILENAME ]; then
-			error "$COMP_FILENAME not found or could not be read."
-			return
-		fi
+    if [ "$CAP_FAST" == "y" ]; then
+        if [ ! -f $COMP_FILENAME ]; then
+            error "Fast: $COMP_FILENAME not found or could not be read."
+            return 11
+        fi
 
-		if [ ! -f "$EXEC_FILENAME" ]; then
-			error ""$EXEC_FILENAME" not found or could not be read."
-			return
-		fi
-	fi
+        if [ ! -f "$EXEC_FILENAME" ]; then
+            error "Fast: "$EXEC_FILENAME" not found or could not be read."
+            return 12
+        fi
+    fi
 
     #Check if file supplied by user exists AND is readable.
     #Note: change -r to -f if you only care that the file exists.
     #But reading is probably important.
     #Does -r imply -f?
-    if [ ! -r $COMP_FILENAME ]; then
-        error "$COMP_FILENAME not found or could not be read."
-        error "${PWD##*/}"
-        return
+    if [ ! -f $COMP_FILENAME ]; then
+        error "$COMP_FILENAME not found or could not be read.""${PWD##*/}"
+        return 13
     fi
 
     #Yeah I'm not super happy with deleting files in the script
     #But it's probably the best thing to do.
     #I'm explicitly writing them out because I don't want to take chances.
     info "Deleting old output files if they exist."
-	if [ "$CAP_FAST" == "y" ]; then
-		rm -f $FAST_FILE
-	else
-		rm -f $COMPILE_FILE $COMPILE_ERROR_FILE
-		rm -f $EXECUTE_FILE $EXECUTE_ERROR_FILE
-		rm -f $STYLE_FILE $STYLE_ERROR_FILE
-		rm -f diff.txt
-	fi
+    if [ "$CAP_FAST" == "y" ]; then
+        rm -f $FAST_FILE
+    else
+        rm -f $COMPILE_FILE $COMPILE_ERROR_FILE
+        rm -f $EXECUTE_FILE $EXECUTE_ERROR_FILE
+        rm -f $STYLE_FILE $STYLE_ERROR_FILE
+        rm -f diff.txt
+    fi
 
-    info "--------------------------------------------------"
+    debug "[NORMAL]: --------------------------------------------------"
 
     #Compile the given file notice.
-    info "Attempting to compile $COMP_FILENAME"
-    info "Output and errors will be printed to $COMPILE_FILE and $COMPILE_ERROR_FILE"
+    debug "[NORMAL]: Attempting to compile $COMP_FILENAME"
+    debug "[NORMAL]: Output and errors will be printed to $COMPILE_FILE and $COMPILE_ERROR_FILE"
+    info "Compiling $COMP_FILENAME"
 
     #Compile the given file, output anything to these files.
 
-	if [ "$CAP_FAST" == "y" ]; then
-		javac $COMP_FILENAME > $FAST_FILE 2>> $FAST_FILE
-	else
-		javac $COMP_FILENAME > $COMPILE_FILE 2> $COMPILE_ERROR_FILE
-	fi
-
-    #Make sure we compiled and were able to output to files.
-    if [ ! -r $COMPILE_FILE ]; then
-        error "Could not create output file for compilation."
-        error "Exiting program with status 2"
-        exit 2
+    if [ "$CAP_FAST" == "y" ]; then
+        javac $COMP_FILENAME > $FAST_FILE 2>> $FAST_FILE
+    else
+        javac $COMP_FILENAME > $COMPILE_FILE 2> $COMPILE_ERROR_FILE
     fi
 
-    if [ ! -r $COMPILE_ERROR_FILE ]; then
+    #Make sure we compiled and were able to output to files.
+    if [ ! -f $COMPILE_FILE ]; then
+        error "Could not create output file for compilation."
+        return 14
+    fi
+
+    if [ ! -f $COMPILE_ERROR_FILE ]; then
         error "Could not create output file for compilation error."
-        error "Exiting program with status 2"
-        exit 2
+        return 15
     fi
 
     #Check if there were compilation errors.
     if [ $(stat -c%s $COMPILE_ERROR_FILE) -gt 0 ]; then
         error "Compilation errors detected.  Errors may compound."
-    else
-        info "No compilation errors detected."
     fi
 
-    info "Compilation complete."
-    info "--------------------------------------------------"
+    debug "[NORMAL] Compilation complete."
+    debug "--------------------------------------------------"
 
     #Literally only about GUIs.
     if [ "$NO_EXEC" = "n" ]; then
 
-		# Replace .java with .class.
-		EXEC_FILENAME="${COMP_FILENAME%.java}"
+        # Replace .java with .class.
+        EXEC_FILENAME="${COMP_FILENAME%.java}"
 
-		if [ ! -r "$EXEC_FILENAME".class ]; then
-			warning "Class not found, or readable.  Skipping execution."
-			return
-		fi
-
-        #Drop the .java from the filename, execute from that.
-        info "Attempting to execute "$EXEC_FILENAME""
-        info "Output and errors will be printed to $EXECUTE_FILE and $EXECUTE_ERROR_FILE"
-
-		#Execute the program to the output files.
-        if [ "$HAVE_INPUT" = "true" ]; then
-			read -t 1 -n 10000 discard
-            if [ ${#ARGUMENT} -eq 0 ]; then
-				if [ "$CAP_FAST" == "y" ]; then
-					timeout $TIME_LIMIT java "$EXEC_FILENAME" <$INPUT_FILE > $FAST_FILE 2>> $FAST_FILE
-				else
-					timeout $TIME_LIMIT java "$EXEC_FILENAME" <$INPUT_FILE > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
-				fi
-            else
-				if [ "$CAP_FAST" == "y" ]; then
-					timeout $TIME_LIMIT java "$EXEC_FILENAME" $ARGUMENT <$INPUT_FILE > $FAST_FILE 2>> $FAST_FILE
-				else
-					timeout $TIME_LIMIT java "$EXEC_FILENAME" $ARGUMENT <$INPUT_FILE > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
-				fi
-            fi
+        if [ ! -f "$EXEC_FILENAME".class ]; then
+            warning "Class not found, or readable.  Skipping execution."
+            return 16
         else
-            if [ ${#ARGUMENT} -eq 0 ]; then
-				if [ "$CAP_FAST" == "y" ]; then
-					timeout $TIME_LIMIT java "$EXEC_FILENAME" > $FAST_FILE 2>> $FAST_FILE
-				else
-					timeout $TIME_LIMIT java "$EXEC_FILENAME" > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
-				fi
-
+            info "Executing ""$EXEC_FILENAME"
+            debug "[NORMAL]: Output and errors will be printed to $EXECUTE_FILE and $EXECUTE_ERROR_FILE"
+            #Execute the program to the output files.
+            if [ "$HAVE_INPUT" = "true" ]; then
+                read -t 1 -n 10000 discard
+                if [ ${#ARGUMENT} -eq 0 ]; then
+                    if [ "$CAP_FAST" == "y" ]; then
+                        timeout $TIME_LIMIT java "$EXEC_FILENAME" <$INPUT_FILE > $FAST_FILE 2>> $FAST_FILE
+                    else
+                        timeout $TIME_LIMIT java "$EXEC_FILENAME" <$INPUT_FILE > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
+                    fi
+                else
+                    if [ "$CAP_FAST" == "y" ]; then
+                        timeout $TIME_LIMIT java "$EXEC_FILENAME" $ARGUMENT <$INPUT_FILE > $FAST_FILE 2>> $FAST_FILE
+                    else
+                        timeout $TIME_LIMIT java "$EXEC_FILENAME" $ARGUMENT <$INPUT_FILE > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
+                    fi
+                fi
             else
-				if [ "$CAP_FAST" == "y" ]; then
-					timeout $TIME_LIMIT java "$EXEC_FILENAME" $ARGUMENT > $FAST_FILE 2>> $FAST_FILE
-				else
-					timeout $TIME_LIMIT java "$EXEC_FILENAME" $ARGUMENT > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
-				fi
+                if [ ${#ARGUMENT} -eq 0 ]; then
+                    if [ "$CAP_FAST" == "y" ]; then
+                        timeout $TIME_LIMIT java "$EXEC_FILENAME" > $FAST_FILE 2>> $FAST_FILE
+                    else
+                        timeout $TIME_LIMIT java "$EXEC_FILENAME" > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
+                    fi
 
+                else
+                    if [ "$CAP_FAST" == "y" ]; then
+                        timeout $TIME_LIMIT java "$EXEC_FILENAME" $ARGUMENT > $FAST_FILE 2>> $FAST_FILE
+                    else
+                        timeout $TIME_LIMIT java "$EXEC_FILENAME" $ARGUMENT > $EXECUTE_FILE 2> $EXECUTE_ERROR_FILE
+                    fi
+
+                fi
             fi
+            if [ $? -eq 124 ]; then
+                error "Error: Timeout Occured.  Infinite Loop/Break detected." >> $EXECUTE_ERROR_FILE
+            fi
+            # Do comparisons for errors during executions.
+            # I think this might only happen if you have errors during compilation.
+            if [ "$CAP_FAST" != "y" ] && [ $(stat -c%s $EXECUTE_ERROR_FILE) -gt 0 ]; then
+                error "Execution errors detected."
+            fi
+
+            # info "Execution complete."
         fi
+        if [ $HAVE_OUTPUT = "true" ]; then
+            info "Doing output comparison."
 
-        if [ $? -eq 124 ]; then
-            error "Error: Timeout Occured.  Infinite Loop/Break detected." >> $EXECUTE_ERROR_FILE
+            # TODO: Clean this up or remove it.  I'm not happy with it and I'm not sure it ever actually worked.
+            
+            # if [ "$CAP_FAST" == "y" ]; then
+            #     diff -y $EXPECTED_FILE $EXECUTE_FILE >> $FAST_FILE
+            # else
+            #     info "Lack of pipe character indicates lines are equal."
+            #     info "Expected file                                 | User Output File"
+            # 
+            #     #Using -y because that makes two columns for viewing - easier to read.
+            #     # tee -a "$LOG_FILE" >&2
+            #     diff -y -W100 $EXPECTED_FILE $EXECUTE_FILE
+            #     diff -y -W100 $EXPECTED_FILE $EXECUTE_FILE >> "$LOG_FILE"
+            # fi
+            # 
+            # info "--------------------------------------------------"
         fi
-
-		#Do comparisons for errors during executions.
-        #I think this might only happen if you have errors during compilation.
-		if [ "$CAP_FAST" != "y" ] && [ $(stat -c%s $EXECUTE_ERROR_FILE) -gt 0 ]; then
-			error "Execution errors detected."
-            info "Continuing.  Errors may compound."
-		else
-			info "No execution errors detected."
-		fi
-
-        info "Execution complete."
-        info "--------------------------------------------------"
     fi
 
-    if [ $HAVE_OUTPUT = "true" ]; then
-		info "Doing output comparison."
+    if [ "$CAP_FAST" != "y" ] && [ "$CHECK" == "y" ]; then
+        info "Executing Automated Style Checker"
+        debug "[NORMAL]:    This program assumes your style checker exists in ~/cs/."
 
-		if [ "$CAP_FAST" == "y" ]; then
-			diff -y $EXPECTED_FILE $EXECUTE_FILE >> $FAST_FILE
-		else
-			info "Lack of pipe character indicates lines are equal."
-			info "Expected file                                 | User Output File"
-
-			#Using -y because that makes two columns for viewing - easier to read.
-			# tee -a "$LOG_FILE" >&2
-			diff -y -W100 $EXPECTED_FILE $EXECUTE_FILE
-			diff -y -W100 $EXPECTED_FILE $EXECUTE_FILE >> "$LOG_FILE"
-		fi
-
-        info "--------------------------------------------------"
-    fi
-
-	if [ "$CAP_FAST" != "y" ] && [ "$CHECK" == "y" ]; then
-		info "Automated Style Checker executing."
-		info "This program assumes your style checker exists in ~/cs/."
-
-		if [ ! -d ~/cs/ ]; then
-        	error "Could not find checkstyle in ~/cs/.  Please install Checkstyle to ~/cs/"
+        if [ ! -d ~/cs/ ]; then
+            error "Could not find checkstyle in ~/cs/.  Please install Checkstyle to ~/cs/"
         else
             echo $COMP_FILENAME_WITHOUT_JAVA > $STYLE_FILE
             ~/cs/checkstyle $COMP_FILENAME > $STYLE_FILE 2> $STYLE_ERROR_FILE
@@ -593,8 +572,8 @@ compileAndExecuteAndStyle() {
                  info "No style errors detected.  Great!"
             fi
     
-		fi
-	fi
+        fi
+    fi
 
 }
 
@@ -753,7 +732,7 @@ FILE_COUNT="$(ls -1 "$EXEC_DIR"/$DIRECTORY | wc -l)"
 
 if [ "$FILE_COUNT" -eq "1" ]; then
     # echo "Pretty sure that's an archive in there boss."
-	info "Possible archive found in $DIRECTORY"
+    info "Possible archive found in $DIRECTORY"
     for file in "$EXEC_DIR"/"$DIRECTORY"/*; do
         mv "$file" "${file// /_}" #convert all spaces to underscores, because /bruh/
         #echo $file
@@ -777,16 +756,16 @@ for d in *; do
         info "Current working directory: ${d}"
         if [ -r "$COMP_FILENAME" ]; then
             #clear
-			if [[ "$COPY_FILE" != "" ]]; then
-				copyFile ./ "$EXEC_DIR"/"$COPY_FILE"
-			fi
-			compileAndExecuteAndStyle
-			report ./
+            if [[ "$COPY_FILE" != "" ]]; then
+                copyFile ./ "$EXEC_DIR"/"$COPY_FILE"
+            fi
+            compileAndExecuteAndStyle
+            report ./
         else
             error "File ""$COMP_FILENAME"" does not exist"
         fi
         cd ..
-		info "--------------------------------------------------------"
+        info "--------------------------------------------------"
     fi
 done
 
